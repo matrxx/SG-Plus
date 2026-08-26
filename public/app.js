@@ -787,7 +787,51 @@ async function submitForm() {
     alert('Erreur de connexion.');
   }
 }
+// Fonction pour soumettre une demande
+async function submitRequest() {
+  const formData = {
+    // Récupérer les données du formulaire
+    ref: document.getElementById('request-ref').value,
+    title: document.getElementById('request-title').value,
+    // Ajouter d'autres champs ici
+  };
 
+  const fileInput = document.getElementById('file-upload');
+  const files = fileInput.files;
+
+  if (files.length === 0) {
+    alert('Veuillez sélectionner au moins un fichier.');
+    return;
+  }
+
+  // Créer un objet FormData pour envoyer les fichiers
+  const data = new FormData();
+  data.append('formData', JSON.stringify(formData));
+  data.append('email', currentUser.email);
+  data.append('firstName', currentUser.firstName);
+
+  // Ajouter les fichiers
+  for (let i = 0; i < files.length; i++) {
+    data.append('files', files[i]);
+  }
+
+  try {
+    const response = await fetch('/api/requests/submit-request', {
+      method: 'POST',
+      body: data
+    });
+
+    const result = await response.json();
+    if (result.success) {
+      alert('Demande soumise avec succès !');
+    } else {
+      alert('Erreur : ' + result.error);
+    }
+  } catch (err) {
+    console.error('Erreur lors de la soumission :', err);
+    alert('Une erreur est survenue.');
+  }
+}
 // Charger les demandes
 async function renderSuiviLists() {
   if (!currentUser) {
