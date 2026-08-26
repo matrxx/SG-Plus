@@ -174,6 +174,38 @@ async function startServer() {
   }
 }
 
+const multer = require('multer');
+const path = require('path');
+
+// Configuration de Multer pour stocker les fichiers
+const storage = multer.diskStorage({
+  destination: (req, file, cb) => {
+    cb(null, 'uploads/'); // Dossier où les fichiers seront stockés
+  },
+  filename: (req, file, cb) => {
+    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1E9);
+    cb(null, uniqueSuffix + '-' + file.originalname);
+  }
+});
+
+// Filtrer les fichiers autorisés
+const fileFilter = (req, file, cb) => {
+  const allowedFormats = ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'raw', 'tiff', 'tif'];
+  const fileExt = path.extname(file.originalname).substring(1).toLowerCase();
+  if (allowedFormats.includes(fileExt)) {
+    cb(null, true);
+  } else {
+    cb(new Error('Format de fichier non autorisé.'), false);
+  }
+};
+
+// Limite de taille : 5 Mo
+const upload = multer({
+  storage: storage,
+  fileFilter: fileFilter,
+  limits: { fileSize: 5242880 }
+});
+
 startServer();
 
 // Arrêt propre du pool de connexions à la base lors de l'arrêt du serveur
