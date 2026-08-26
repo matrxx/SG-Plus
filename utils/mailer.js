@@ -3,19 +3,66 @@
 // aucune information de connexion n'est codée en dur ici.
 
 const nodemailer = require('nodemailer');
+const fs = require('fs');
+const path = require('path');
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: parseInt(process.env.SMTP_PORT || '587', 10),
-  secure: process.env.SMTP_SECURE === 'true',
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASSWORD,
-  },
-  tls: {
-    rejectUnauthorized: false,
-  },
-});
+// Fonction pour envoyer un e-mail avec pièces jointes
+async function sendRequestEmail(email, firstName, requestDetails, attachments = []) {
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: parseInt(process.env.SMTP_PORT || '587', 10),
+    secure: process.env.SMTP_SECURE === 'true',
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASSWORD,
+    },
+    tls: { rejectUnauthorized: false }
+  });
+
+  // Préparer les pièces jointes
+  const mailAttachments = attachments.map(attachment => ({
+    filename: attachment.originalname,
+    path: attachment.path
+  }));
+
+  try {
+    await transporter.sendMail({
+      from: `"Nestor-C2" <${process.env.SMTP_USER}>`,
+      to: email,
+      subject: `Nouvelle demande - ${requestDetails.ref}`,
+      html: `
+        <div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">
+          <h2>Nouvelle demande soumise</h2>
+          <p>Bonjour ${firstName},</p>
+          <p>Une nouvelle demande a été soumise avec les détails suivants :</p>
+          <pre>${JSON.stringify(requestDetails, null, 2)}</pre>
+          <p>Les pièces jointes sont incluses avec cet e-mail.</p>
+        </div>
+      `,
+      text: `Bonjour ${firstName},\n\nUne nouvelle demande a été soumise avec les détails suivants :\n${JSON.stringify(requestDetails, null, 2)}\n\nLes pièces jointes sont incluses avec cet e-mail.`,
+      attachments: mailAttachments
+    });
+    return true;
+  } catch (err) {
+    console.error('[MAILER] Erreur:', err.message);
+    return false;
+  }
+}
+
+//module.exports = { sendRequestEmail };
+
+//const transporter = nodemailer.createTransport({
+  //host: process.env.SMTP_HOST,
+  //port: parseInt(process.env.SMTP_PORT || '587', 10),
+  //secure: process.env.SMTP_SECURE === 'true',
+  //auth: {
+    //user: process.env.SMTP_USER,
+    //pass: process.env.SMTP_PASSWORD,
+  //},
+  //tls: {
+    //rejectUnauthorized: false,
+  //},
+//});
 
 function checkSMTPConfig() {
   const requiredVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'];
