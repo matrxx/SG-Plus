@@ -72,7 +72,6 @@ const svgIcons = {
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
   arrowLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 16V8"/><path d="M12 16V5"/><path d="M17 16v-7"/><path d="M5 8h3M10 5h3M15 9h3"/><path d="M6 20V17"/><path d="M18 20V17"/></svg>',
-  Budgets: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>',
   userCheck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 11l2 2 3-3"/></svg>',
   chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
@@ -111,7 +110,7 @@ const categoryForms = {
         icon: 'doorEnter',
         steps: [
           { label: "Pré-requis à la demande d'installation", title: "Pré-requis à la demande d'installation", desc: "Avant de commencer, confirmez les éléments suivants", type: 'checklist', items: ["La date d'arrivée de l'agent est confirmée par le service RH", "Le poste de travail (bureau) est identifié et disponible", "Le responsable hiérarchique de l'agent est informé"] },
-          { label: "Informations sur l'agent concerné", title: "Informations sur l'agent concerné", desc: "Renseignez l'identité du nouvel agent", type: 'fields', fields: [{label:"Prénom", req:true}, {label:"Nom", req:true}, {label:"E-mail", req:true, type:'email'}, {label:"Date d'arrivée", req:true, type:'date'}, {label:"Service / direction", req:true}, {label:"Fonction"}] },
+          { label: "Informations sur l'agent concerné", title: "Informations sur l'agent concerné", desc: "Renseignez l'identité du nouvel agent", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail", req: true, type: 'email'}, {label: "Date d'arrivée", req: true, type: 'date'}, {label: "Service / direction", req: true}, {label: "Fonction"}] },
           { label: "Contexte de l'arrivée", title: "Contexte de l'arrivée", desc: "Précisez le type de contrat et la localisation", type: 'mixed', radio: { label: "Type de contrat", req: true, options: ["Fonctionnaire", "Contractuel", "Stage / alternance", "Vacataire"] }, fields: [{ label: "Site / bâtiment", req: true, options: ["Paris Carrousel", "Paris Flore", "Versailles aile Paris", "Versailles aile Sceaux"] }, { label: "Numéro de bureau" }] },
           { label: "Mobilier", title: "Mobilier", desc: "Sélectionnez les éléments à installer", type: 'checklist', items: ["Bureau", "Chaise ergonomique", "Caisson de rangement", "Armoire", "Porte-manteau"] },
           { label: "Poste de travail informatique", title: "Poste de travail informatique", desc: "Sélectionnez le type d'ordinateur et les accessoires nécessaires", type: 'mixed', radio: { label: "Type d'ordinateur", req: true, options: ["Ordinateur portable MCC", "Ordinateur fixe", "Déjà existant", "Ordinateur mutualisé"] }, fields: [{ label: "Autre précision" }] },
@@ -123,18 +122,18 @@ const categoryForms = {
         ]
       },
       demenagement: { title: "Déménagement d'un agent", ref: "DEM", icon: 'truck', steps: [
-        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le déménagement", desc: "Identité et localisation actuelle/nouvelle", type: 'fields', fields: [{label:"Prénom", req:true}, {label:"Nom", req:true}, {label:"E-mail professionnel", req:true, type:'email'}, {label:"Bureau actuel", req:true}, {label:"Nouveau bureau", req:true}, {label:"Date du déménagement", req:true, type:'date'}] },
+        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le déménagement", desc: "Identité et localisation actuelle/nouvelle", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail professionnel", req: true, type: 'email'}, {label: "Bureau actuel", req: true}, {label: "Nouveau bureau", req: true}, {label: "Date du déménagement", req: true, type: 'date'}] },
         { label: "Mobilier à déménager", title: "Mobilier à déménager", desc: "Sélectionnez les éléments concernés", type: 'checklist', items: ["Bureau","Chaise","Caisson de rangement","Armoire","Étagères"] },
         { label: "Informatique à déménager", title: "Informatique à déménager", desc: "Équipements informatiques à transférer", type: 'checklist', items: ["Unité centrale / portable","Écran(s)","Imprimante","Périphériques (souris, clavier...)"] },
-        { label: "Téléphonie à déménager", title: "Téléphonie à déménager", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label:"Action requise", options:["Transfert du poste existant","Nouvelle ligne","Aucune action"]}, fields: [] },
+        { label: "Téléphonie à déménager", title: "Téléphonie à déménager", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label: "Action requise", options: ["Transfert du poste existant","Nouvelle ligne","Aucune action"]}, fields: [] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       depart: { title: "Départ d'un agent", ref: "DEP", icon: 'doorExit', steps: [
-        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le départ", desc: "Identité et date de départ", type: 'fields', fields: [{label:"Prénom", req:true}, {label:"Nom", req:true}, {label:"E-mail professionnel", req:true, type:'email'}, {label:"Date de départ", req:true, type:'date'}, {label:"Motif du départ"}] },
+        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le départ", desc: "Identité et date de départ", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail professionnel", req: true, type: 'email'}, {label: "Date de départ", req: true, type: 'date'}, {label: "Motif du départ"}] },
         { label: "Mobilier à récupérer", title: "Mobilier à récupérer", desc: "Sélectionnez les éléments à reprendre", type: 'checklist', items: ["Bureau","Chaise","Caisson de rangement","Armoire"] },
         { label: "Matériel informatique à récupérer", title: "Matériel informatique à récupérer", desc: "Équipements à restituer", type: 'checklist', items: ["Ordinateur portable / fixe","Écran(s)","Badge d'accès","Périphériques", "Téléphone mobile professionnel"] },
-        { label: "Matériel de téléphonie à récupérer", title: "Matériel de téléphonie à récupérer", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label:"Action sur la ligne", options:["Clôture définitive","Réaffectation à un autre agent"]}, fields: [] },
-          {desc: "Pour rappel, les Badges d'acces sont a restitués obligatoirement au service RH"}, 
+        { label: "Matériel de téléphonie à récupérer", title: "Matériel de téléphonie à récupérer", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label: "Action sur la ligne", options: ["Clôture définitive","Réaffectation à un autre agent"]}, fields: [] },
+          {desc: "Pour rappel, les badges d'accès sont à restituer obligatoirement au service RH."}, 
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -144,28 +143,28 @@ const categoryForms = {
     title: 'Fournitures',
     forms: {
       signaletique: { title: "Signalétique de bureau", ref: "SIG", icon: 'tag', steps: [
-        { label: "Votre demande", title: "Signalétique de bureau", desc: "Décrivez votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Bureau concerné", req:true},{label:"Texte souhaité sur la plaque", req:true},{label:"Quantité"}] }
+        { label: "Votre demande", title: "Signalétique de bureau", desc: "Décrivez votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Bureau concerné", req: true},{label: "Texte souhaité sur la plaque", req: true},{label: "Quantité"}] }
       ]},
       cartons: { title: "Cartons d'archives et d'élimination", ref: "CAE", icon: 'box', steps: [
-        { label: "Votre demande", title: "Cartons d'archives et d'élimination", desc: "Précisez votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Nombre de cartons", req:true},{label:"Type (archive / élimination)", req:true}] },
+        { label: "Votre demande", title: "Cartons d'archives et d'élimination", desc: "Précisez votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Nombre de cartons", req: true},{label: "Type (archive / élimination)", req: true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       dossier_srh: { title: "Dossier spécifique SRH", ref: "SRH", icon: 'folder', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Nature du dossier demandé", req:true}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Nature du dossier demandé", req: true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       courantes: { title: "Fournitures courantes", ref: "FCO", icon: 'pencil', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Articles souhaités", req:true},{label:"Quantité"}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Articles souhaités", req: true},{label: "Quantité"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       sanitaires: { title: "Fournitures sanitaires", ref: "FSA", icon: 'droplet', steps: [
-        { label: "Identité du demandeur", title: "Fournitures sanitaires", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Articles souhaités", req:true}] }
+        { label: "Identité du demandeur", title: "Fournitures sanitaires", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Articles souhaités", req: true}] }
       ]},
       specifiques: { title: "Fournitures spécifiques", ref: "FSP", icon: 'stars', steps: [
-        { label: "Identité du demandeur", title: "Fournitures spécifiques", desc: "Décrivez votre besoin particulier", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description du besoin", req:true, type:'textarea'}] }
+        { label: "Identité du demandeur", title: "Fournitures spécifiques", desc: "Décrivez votre besoin particulier", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] }
       ]},
       tampons: { title: "Tampons", ref: "TAM", icon: 'stamp', steps: [
-        { label: "Identité du demandeur", title: "Tampons", desc: "Renseignez le texte souhaité sur le tampon", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Texte du tampon", req:true},{label:"Quantité"}] }
+        { label: "Identité du demandeur", title: "Tampons", desc: "Renseignez le texte souhaité sur le tampon", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Texte du tampon", req: true},{label: "Quantité"}] }
       ]}
     }
   },
@@ -184,9 +183,9 @@ const categoryForms = {
             desc: "Renseignez vos coordonnées", 
             type: 'fields', 
             fields: [
-              {label:"Nom", req:true, type:'text'},
-              {label:"Prénom", req:true, type:'text'},
-              {label:"Direction", req:true, type:'text'}
+              {label: "Nom", req: true, type: 'text'},
+              {label: "Prénom", req: true, type: 'text'},
+              {label: "Direction", req: true, type: 'text'}
             ] 
           },
           { 
@@ -195,10 +194,10 @@ const categoryForms = {
             desc: "Renseignez les informations du fournisseur", 
             type: 'fields', 
             fields: [
-              {label:"Nom", req:true, type:'text'},
-              {label:"Adresse", req:true, type:'text'},
-              {label:"Mail du fournisseur", req:true, type:'text'},
-              {label:"Si nouveau fournisseur, numéro de SIRET et RIB obligatoires", req:false, type:'text'}
+              {label: "Nom", req: true, type: 'text'},
+              {label: "Adresse", req: true, type: 'text'},
+              {label: "Mail du fournisseur", req: true, type: 'text'},
+              {label: "Si nouveau fournisseur, numéro de SIRET et RIB obligatoires", req: false, type: 'text'}
             ] 
           },
           { 
@@ -206,18 +205,18 @@ const categoryForms = {
             title: "Nature de la commande", 
             desc: "Précisez les détails de la commande", 
             type: 'mixed', 
-            radio: {label:"Type de commande", req:true, options:["de l'acquisition","de la prestation"]}, 
+            radio: {label: "Type de commande", req: true, options: ["de l'acquisition","de la prestation"]}, 
             fields: [
-              {label:"Titre de la commande", req:true, type:'text'},
-              {label:"Justification", req:true, type:'text'},
-              {label:"Si dépense dans le cadre d'un projet spécifique (européen, PNCR) préciser lequel", req:false, type:'text'},
-              {label:"Montant de la commande", req:true, type:'text'}
+              {label: "Titre de la commande", req: true, type: 'text'},
+              {label: "Justification", req: true, type: 'text'},
+              {label: "Si dépense dans le cadre d'un projet spécifique (européen, PNCR) préciser lequel", req: false, type: 'text'},
+              {label: "Montant de la commande", req: true, type: 'text'}
             ] 
           },
           { 
             label: "Rappel des procédures", 
             title: "Rappel des procédures", 
-            desc: "Pour rappel, les procédures applicables à la commande publique sont les suivantes", 
+            desc: "Pour rappel, les procédures applicables à la commande publique sont les suivantes :", 
             type: 'fixed', 
             content: "<ul><li>Si dépense inférieure à 40 000 € HT : plusieurs devis souhaitables, publicité non obligatoire</li><li>Si dépense comprise entre 40 000€ HT et 90 000€ HT : établissement d'un cahier des charges pour un marché à procédure adaptée, publicité libre ou adaptée</li><li>Si dépense supérieure à 90 000 € HT et inférieure à 140 000 € HT : établissement d'un cahier des charges et publication au BOAMP ou dans un JAL</li><li>Si dépense supérieure à 140 000 HT : publication au BOAMP et au JOUE et recours obligatoire à la procédure formalisée des marchés publics</li></ul>"
           },
@@ -241,8 +240,8 @@ const categoryForms = {
     title: 'Ménage',
     forms: {
       menage_general: { title: "Ménage, désinfestation et déchets", ref: "MEN", icon: 'spray', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Site / bâtiment", req:true}] },
-        { label: "Votre demande", title: "Votre demande", desc: "Précisez la nature de l'intervention", type: 'mixed', radio: {label:"Type d'intervention", req:true, options:["Ménage ponctuel","Désinfestation","Enlèvement de déchets"]}, fields: [{label:"Précisions complémentaires"}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Site / bâtiment", req: true}] },
+        { label: "Votre demande", title: "Votre demande", desc: "Précisez la nature de l'intervention", type: 'mixed', radio: {label: "Type d'intervention", req: true, options: ["Ménage ponctuel","Désinfestation","Enlèvement de déchets"]}, fields: [{label: "Précisions complémentaires"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -252,11 +251,11 @@ const categoryForms = {
     title: 'Intervention technique',
     forms: {
       ascenseur: { title: "Ascenseur", ref: "ASC", icon: 'stairs', steps: [
-        { label: "Votre demande", title: "Ascenseur", desc: "Décrivez le problème constaté", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Site / bâtiment", req:true},{label:"Description du problème", req:true, type:'textarea'}] }
+        { label: "Votre demande", title: "Ascenseur", desc: "Décrivez le problème constaté", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Site / bâtiment", req: true},{label: "Description du problème", req: true, type: 'textarea'}] }
       ]},
       intervention: { title: "Demande d'intervention technique", ref: "ITE", icon: 'tool', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Site / bâtiment", req:true}] },
-        { label: "Votre demande", title: "Votre demande", desc: "Décrivez l'intervention nécessaire", type: 'mixed', radio: {label:"Domaine concerné", options:["Électricité","Plomberie","Chauffage / climatisation","Autre"]}, fields: [{label:"Description du problème", req:true, type:'textarea'}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Site / bâtiment", req: true}] },
+        { label: "Votre demande", title: "Votre demande", desc: "Décrivez l'intervention nécessaire", type: 'mixed', radio: {label: "Domaine concerné", options: ["Électricité","Plomberie","Chauffage / climatisation","Autre"]}, fields: [{label: "Description du problème", req: true, type: 'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -266,24 +265,24 @@ const categoryForms = {
     title: 'Accès aux sites',
     forms: {
       acces_exceptionnel: { title: "Autorisation d'accès exceptionnel", ref: "AEX", icon: 'clock', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez la période concernée", type: 'fields', fields: [{label:"Date et heure d'arrivée", req:true},{label:"Date et heure de départ", req:true},{label:"Motif", req:true, type:'textarea'}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
+        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez la période concernée", type: 'fields', fields: [{label: "Date et heure d'arrivée", req: true},{label: "Date et heure de départ", req: true},{label: "Motif", req: true, type: 'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       perte_badge: { title: "Déclaration de perte du badge", ref: "PBA", icon: 'badgeOff', steps: [
-        { label: "Identité du demandeur", title: "Déclaration de perte du badge", desc: "Renseignez vos coordonnées et les circonstances", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Date de la perte", req:true, type:'date'},{label:"Circonstances"}] },
+        { label: "Identité du demandeur", title: "Déclaration de perte du badge", desc: "Renseignez vos coordonnées et les circonstances", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Date de la perte", req: true, type: 'date'},{label: "Circonstances"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       cle_bureau: { title: "Clé de bureau", ref: "CLE", icon: 'key', steps: [
-        { label: "Votre demande", title: "Clé de bureau", desc: "Renseignez votre demande", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Numéro de bureau", req:true},{label:"Motif"}] }
+        { label: "Votre demande", title: "Clé de bureau", desc: "Renseignez votre demande", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Numéro de bureau", req: true},{label: "Motif"}] }
       ]},
       acces_prestataire: { title: "Autorisation d'accès prestataire ou autre personne extérieure", ref: "APR", icon: 'userPlus', steps: [
-        { label: "Votre demande", title: "Votre demande", desc: "Décrivez le contexte de l'intervention", type: 'fields', fields: [{label:"Prénom du demandeur", req:true},{label:"Nom du demandeur", req:true},{label:"Date(s) d'intervention", req:true},{label:"Motif de l'accès", req:true}] },
-        { label: "Les intervenants", title: "Les intervenants", desc: "Identité des personnes externes concernées", type: 'fields', fields: [{label:"Nom complet intervenant 1", req:true},{label:"Société", req:true},{label:"Nom complet intervenant 2 (optionnel)"}] }
+        { label: "Votre demande", title: "Votre demande", desc: "Décrivez le contexte de l'intervention", type: 'fields', fields: [{label: "Prénom du demandeur", req: true},{label: "Nom du demandeur", req: true},{label: "Date(s) d'intervention", req: true},{label: "Motif de l'accès", req: true}] },
+        { label: "Les intervenants", title: "Les intervenants", desc: "Identité des personnes externes concernées", type: 'fields', fields: [{label: "Nom complet intervenant 1", req: true},{label: "Société", req: true},{label: "Nom complet intervenant 2 (optionnel)"}] }
       ]},
       modif_droits: { title: "Modification des droits du badge", ref: "MDB", icon: 'shieldLock', steps: [
-        { label: "Agent concerné", title: "Agent concerné", desc: "Identifiez l'agent dont les droits doivent être modifiés", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Numéro de badge"}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez les zones d'accès concernées", type: 'fields', fields: [{label:"Zones à ajouter"},{label:"Zones à retirer"},{label:"Justification", req:true}] },
+        { label: "Agent concerné", title: "Agent concerné", desc: "Identifiez l'agent dont les droits doivent être modifiés", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Numéro de badge"}] },
+        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez les zones d'accès concernées", type: 'fields', fields: [{label: "Zones à ajouter"},{label: "Zones à retirer"},{label: "Justification", req: true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -293,19 +292,19 @@ const categoryForms = {
     title: 'Livraison, Envoi et Manutention',
     forms: {
       livraison: { title: "Livraison", ref: "LIV", icon: 'truckDelivery', steps: [
-        { label: "Identité du demandeur et sélection du type de livraison", title: "Livraison", desc: "Renseignez les détails de la livraison attendue", type: 'mixed', radio: {label:"Type de livraison", options:["Colis","Palette","Courrier volumineux"]}, fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Date prévue"}] },
+        { label: "Identité du demandeur et sélection du type de livraison", title: "Livraison", desc: "Renseignez les détails de la livraison attendue", type: 'mixed', radio: {label: "Type de livraison", options: ["Colis","Palette","Courrier volumineux"]}, fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date prévue"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       signaler_envoi: { title: "Signaler un envoi à la cellule courrier", ref: "SEC", icon: 'mailForward', steps: [
-        { label: "Identité du demandeur et sélection du type de livraison", title: "Signaler un envoi", desc: "Renseignez les détails de l'envoi", type: 'mixed', radio: {label:"Type d'envoi", options:["Courrier standard","Recommandé","Colis"]}, fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Destinataire"}] },
+        { label: "Identité du demandeur et sélection du type de livraison", title: "Signaler un envoi", desc: "Renseignez les détails de l'envoi", type: 'mixed', radio: {label: "Type d'envoi", options: ["Courrier standard","Recommandé","Colis"]}, fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Destinataire"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       manutention: { title: "Manutention sur site", ref: "MAN", icon: 'forklift', steps: [
-        { label: "Identité du demandeur", title: "Manutention sur site", desc: "Décrivez le besoin de manutention", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description du besoin", req:true, type:'textarea'}] },
+        { label: "Identité du demandeur", title: "Manutention sur site", desc: "Décrivez le besoin de manutention", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       livraison_quai: { title: "Signaler une livraison ou un enlèvement au quai", ref: "LEQ", icon: 'truckLoading', steps: [
-        { label: "Identité du demandeur", title: "Signaler une livraison ou un enlèvement au quai", desc: "Renseignez les coordonnées et l'horaire", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Date et heure prévues", req:true},{label:"Nature (livraison / enlèvement)", req:true}] },
+        { label: "Identité du demandeur", title: "Signaler une livraison ou un enlèvement au quai", desc: "Renseignez les coordonnées et l'horaire", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date et heure prévues", req: true},{label: "Nature (livraison / enlèvement)", req: true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -315,11 +314,11 @@ const categoryForms = {
     title: 'Équipements de bureau',
     forms: {
       mobilier_standard: { title: "Mobilier standard", ref: "MST", icon: 'armchair', steps: [
-        { label: "Identité du demandeur", title: "Mobilier standard", desc: "Renseignez vos coordonnées et le mobilier souhaité", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Mobilier souhaité", req:true}] },
+        { label: "Identité du demandeur", title: "Mobilier standard", desc: "Renseignez vos coordonnées et le mobilier souhaité", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Mobilier souhaité", req: true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       equip_specifiques: { title: "Équipements spécifiques de bureau", ref: "ESB", icon: 'desk', steps: [
-        { label: "Identité du demandeur", title: "Équipements spécifiques de bureau", desc: "Décrivez le besoin particulier", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description du besoin", req:true, type:'textarea'}] },
+        { label: "Identité du demandeur", title: "Équipements spécifiques de bureau", desc: "Décrivez le besoin particulier", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -329,7 +328,7 @@ const categoryForms = {
     title: 'Véhicule',
     forms: {
       reservation: { title: "Réservation de véhicule seul", ref: "VEH", icon: 'car', steps: [
-        { label: "Votre demande", title: "Réservation de véhicule seul", desc: "Renseignez les détails de votre réservation", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Date et heure de départ", req:true},{label:"Date et heure de retour", req:true},{label:"Motif du déplacement"}] }
+        { label: "Votre demande", title: "Réservation de véhicule seul", desc: "Renseignez les détails de votre réservation", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date et heure de départ", req: true},{label: "Date et heure de retour", req: true},{label: "Motif du déplacement"}] }
       ]}
     }
   },
@@ -338,35 +337,35 @@ const categoryForms = {
     title: 'Événementiel',
     forms: {
       accueil_cafe: { title: "Accueil café, croissants", ref: "ACC", icon: 'coffee', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
-        { label: "Lieu et date de l'événement", title: "Lieu et date de l'événement", desc: "Précisez les modalités", type: 'fields', fields: [{label:"Date", req:true, type:'date'},{label:"Lieu", req:true},{label:"Nombre de personnes", req:true}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
+        { label: "Lieu et date de l'événement", title: "Lieu et date de l'événement", desc: "Précisez les modalités", type: 'fields', fields: [{label: "Date", req: true, type: 'date'},{label: "Lieu", req: true},{label: "Nombre de personnes", req: true}] },
         { label: "Bon de commande et facturation", title: "Bon de commande et facturation", desc: "Sélectionnez les articles souhaités", type: 'checklist', items: ["Café","Thé","Croissants / viennoiseries","Jus de fruits","Eau"] },
-        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label:"Code budgétaire / centre de coûts", req:true}] },
+        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label: "Code budgétaire / centre de coûts", req: true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       coupon_repas: { title: "Coupon repas", ref: "CRE", icon: 'ticket', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
-        { label: "Commande", title: "Commande", desc: "Précisez le nombre de coupons", type: 'fields', fields: [{label:"Nombre de coupons", req:true},{label:"Date d'utilisation prévue"}] },
-        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label:"Code budgétaire / centre de coûts", req:true}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
+        { label: "Commande", title: "Commande", desc: "Précisez le nombre de coupons", type: 'fields', fields: [{label: "Nombre de coupons", req: true},{label: "Date d'utilisation prévue"}] },
+        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label: "Code budgétaire / centre de coûts", req: true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       materiel_evenementiel: { title: "Matériel d'événementiel et de réunion", ref: "MER", icon: 'presentation', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
-        { label: "Lieu et prestation", title: "Lieu et prestation", desc: "Précisez le matériel et le lieu", type: 'mixed', radio: {label:"Matériel souhaité", options:["Vidéoprojecteur","Sonorisation","Mobilier de réunion","Visioconférence"]}, fields: [{label:"Lieu / salle", req:true},{label:"Date", req:true, type:'date'}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
+        { label: "Lieu et prestation", title: "Lieu et prestation", desc: "Précisez le matériel et le lieu", type: 'mixed', radio: {label: "Matériel souhaité", options: ["Vidéoprojecteur","Sonorisation","Mobilier de réunion","Visioconférence"]}, fields: [{label: "Lieu / salle", req: true},{label: "Date", req: true, type: 'date'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
   },
 
-  'oeuvres-art': {
-    title: "Œuvres et objets d'art",
-    forms: {
-      depot_oeuvres: { title: "Dépôt d'œuvres et objets d'art", ref: "OEA", icon: 'palette', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description de l'œuvre", req:true, type:'textarea'}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  }
+ // 'oeuvres-art': {
+  //  title: "Œuvres et objets d'art",
+   // forms: {
+    //  depot_oeuvres: { title: "Dépôt d'œuvres et objets d'art", ref: "OEA", icon: 'palette', steps: [
+     //   { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description de l'œuvre", req: true, type: 'textarea'}] },
+      //  { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
+     // ]}
+   // }
+ // }
 };
 
 // -----------------------------------------------------------------------------
@@ -443,7 +442,7 @@ function parseJsonResponse(response) {
     try {
       return JSON.parse(text);
     } catch (err) {
-      console.warn('Réponse non JSON ignorée:', text.slice(0, 160));
+      console.warn('Réponse non JSON ignorée: ', text.slice(0, 160));
       return {};
     }
   });
@@ -464,7 +463,7 @@ async function checkAuth() {
       showUnauthenticatedUI();
     }
   } catch (err) {
-    console.error('Erreur auth:', err);
+    console.error('Erreur auth: ', err);
     currentUser = null;
     showUnauthenticatedUI();
   }
@@ -557,7 +556,7 @@ async function trySubmitLogin() {
       alert(data.error || 'Erreur de connexion.');
     }
   } catch (err) {
-    console.error('Erreur:', err);
+    console.error('Erreur: ', err);
     alert('Erreur de connexion. Vérifiez votre connexion Internet.');
   }
 }
@@ -588,7 +587,7 @@ async function trySubmitForgot() {
       alert(data.error || 'Erreur.');
     }
   } catch (err) {
-    console.error('Erreur:', err);
+    console.error('Erreur: ', err);
     alert('Erreur. Vérifiez votre connexion Internet.');
   }
 }
@@ -642,7 +641,7 @@ async function trySubmitSignup() {
       alert(data.error || 'Erreur lors de l\'inscription.');
     }
   } catch (err) {
-    console.error('Erreur:', err);
+    console.error('Erreur: ', err);
     alert('Erreur lors de l\'inscription. Vérifiez votre connexion Internet.');
   }
 }
@@ -654,7 +653,7 @@ async function logout() {
     currentUser = null;
     showUnauthenticatedUI();
   } catch (err) {
-    console.error('Erreur:', err);
+    console.error('Erreur: ', err);
   }
 }
 
@@ -758,7 +757,7 @@ async function submitForm() {
           <div class="wz-success-title">Demande envoyée</div>
           <div class="wz-success-text">Votre demande « ${form.title} » a été transmise.</div>
           <div class="wz-success-ref">Référence : <strong>${data.request.reference}</strong></div>
-          <button class="wz-btn-primary" style="margin-top:18px;" onclick="backToAccueil()">Retour à l'accueil</button>
+          <button class="wz-btn-primary" style="margin-top: 18px;" onclick="backToAccueil()">Retour à l'accueil</button>
         </div>
       `;
       document.getElementById('wz-footer').style.display = 'none';
@@ -767,7 +766,7 @@ async function submitForm() {
       alert(data.error || 'Erreur lors de l\'envoi.');
     }
   } catch (err) {
-    console.error('Erreur:', err);
+    console.error('Erreur: ', err);
     alert('Erreur de connexion.');
   }
 }
@@ -794,7 +793,7 @@ async function renderSuiviLists() {
         submittedRequests = Array.isArray(sampleRequests) ? sampleRequests : [];
       }
     } catch (err) {
-      console.error('Erreur:', err);
+      console.error('Erreur: ', err);
       submittedRequests = Array.isArray(sampleRequests) ? sampleRequests : [];
     }
   }
@@ -863,7 +862,7 @@ function renderCategories(filterText) {
     html += `<div class="cat-card ${isOpen ? 'open' : ''}" id="cat-${meta.key}">
       <div class="cat-header" onclick="toggleCat('${meta.key}')">
         <div class="cat-header-left">
-          <div class="cat-icon" style="background:${meta.bg};color:${meta.fg};">${icon(meta.icon)}</div>
+          <div class="cat-icon" style="background: ${meta.bg};color: ${meta.fg};">${icon(meta.icon)}</div>
           <div class="cat-name">${cat.title}</div>
         </div>
         <span class="svg-icon chevron">${icon('chevronDown')}</span>
@@ -938,7 +937,7 @@ function renderSteps() {
     const num = idx + 1;
     const state = num < currentStep ? 'done' : num === currentStep ? 'current' : '';
     const showLine = num < form.steps.length;
-    return `<div class="wz-step ${state}" onclick="goToStep(${num})" style="position:relative;">
+    return `<div class="wz-step ${state}" onclick="goToStep(${num})" style="position: relative;">
       <div class="wz-step-num">${num < currentStep ? icon('check') : num}</div>
       <div class="wz-step-label">${s.label}</div>
       ${showLine ? '<div class="wz-step-line"></div>' : ''}
@@ -1074,7 +1073,7 @@ function renderFieldsHtml(fields, stepIdx) {
     if (f.type === 'textarea') {
       return `<div class="wz-field">
         <label class="wz-field-label">${f.label} ${f.req ? '<span class="req">*</span>' : ''}</label>
-        <textarea class="wz-input" data-step="${stepIdx}" data-field="${fi}" rows="3" style="resize:vertical;"></textarea>
+        <textarea class="wz-input" data-step="${stepIdx}" data-field="${fi}" rows="3" style="resize: vertical;"></textarea>
       </div>`;
     }
     return `<div class="wz-field">
