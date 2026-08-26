@@ -119,6 +119,35 @@ router.get('/:id', requireAuth, async (req, res) => {
     return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
   }
 });
+const { sendRequestEmail } = require('../utils/mailer');
+
+// Route pour soumettre une demande avec pièces jointes
+router.post('/submit-request', upload.array('files'), async (req, res) => {
+  const { formData, email, firstName } = req.body;
+  const files = req.files;
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'Aucun fichier téléchargé.' });
+  }
+
+  const requestData = {
+    ...JSON.parse(formData),
+    files: files.map(file => ({
+      filename: file.filename,
+      originalname: file.originalname,
+      path: file.path
+    }))
+  };
+
+  // Envoyer l'e-mail avec les pièces jointes
+  const emailSent = await sendRequestEmail(email, firstName, requestData, requestData.files);
+
+  if (!emailSent) {
+    return res.status(500).json({ error: 'Échec de l\'envoi de l\'e-mail.' });
+  }
+
+  res.json({ success: true, message: 'Demande soumise avec succès.' });
+});
 
 // ---------------------------------------------------------------
 // PUT /api/requests/:id — Mettre à jour une demande (brouillon)
