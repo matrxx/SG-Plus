@@ -718,6 +718,23 @@ function getCurrentForm() {
   return categoryForms[currentCategoryKey].forms[currentFormKey];
 }
 
+// Gestion du téléchargement de fichiers
+document.getElementById('file-upload').addEventListener('change', function(e) {
+  const fileList = document.getElementById('file-list');
+  fileList.innerHTML = ''; // Réinitialiser la liste
+
+  const files = e.target.files;
+  if (files.length === 0) return;
+
+  for (let i = 0; i < files.length; i++) {
+    const file = files[i];
+    const fileItem = document.createElement('div');
+    fileItem.className = 'file-item';
+    fileItem.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} Mo)`;
+    fileList.appendChild(fileItem);
+  }
+});
+
 // Soumettre un formulaire
 async function submitForm() {
   const form = getCurrentForm();
