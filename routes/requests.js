@@ -8,6 +8,34 @@ const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/requireAuth');
 
 const router = express.Router();
+const { upload } = require('../server'); // Importe la configuration Multer
+
+// Route pour soumettre une demande avec pièces jointes
+router.post('/submit-request', upload.array('files'), (req, res) => {
+  const { formData } = req.body;
+  const files = req.files;
+
+  if (!files || files.length === 0) {
+    return res.status(400).json({ error: 'Aucun fichier téléchargé.' });
+  }
+
+  // Traiter les données du formulaire et les fichiers
+  const requestData = {
+    ...JSON.parse(formData),
+    files: files.map(file => ({
+      filename: file.filename,
+      originalname: file.originalname,
+      path: file.path
+    }))
+  };
+
+  // Ici, tu peux enregistrer requestData en base de données
+  // et envoyer un e-mail avec les pièces jointes
+
+  res.json({ success: true, message: 'Demande soumise avec succès.', requestData });
+});
+
+module.exports = router;
 
 // ---------------------------------------------------------------
 // GET /api/requests — Liste des demandes de l'agent connecté
