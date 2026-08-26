@@ -47,14 +47,12 @@ nano .env  # ou utilisez votre éditeur préféré
 |----------|-------------|---------|
 | `DATABASE_URL` | URL de connexion PostgreSQL | `postgresql://user:password@localhost:5432/nestor_c2` |
 | `SESSION_SECRET` | Clé secrète pour les sessions | `votre_clé_sécrète_ici` |
-| `ALLOWED_EMAIL_DOMAIN` | Domaine e-mail autorisé (séparés par des virgules) | `culture.gouv.fr` |
-| `AUTH_MODE` | Mode d’authentification : `local`, `exchange` | `exchange` |
-| `EXCHANGE_AUTH_URL` | Endpoint de validation Exchange | `https://exchange.example.local/auth` |
+| `ALLOWED_EMAIL_DOMAIN` | Domaine e-mail autorisé (séparés par des virgules) | `mon-entreprise.com` |
 | `ALLOWED_IP_RANGES` | Plages IP autorisées (format CIDR) | `10.0.0.0/8,192.168.0.0/16` |
-| `PUBLIC_BASE_URL` | URL publique du portail | `https://portail.culture.gouv.fr` |
-| `SMTP_HOST` | Hôte SMTP | `smtp.culture.gouv.fr` |
+| `PUBLIC_BASE_URL` | URL publique du portail | `https://portail.mon-entreprise.com` |
+| `SMTP_HOST` | Hôte SMTP | `smtp.mon-entreprise.com` |
 | `SMTP_PORT` | Port SMTP | `587` |
-| `SMTP_USER` | Utilisateur SMTP | `portail@culture.gouv.fr` |
+| `SMTP_USER` | Utilisateur SMTP | `portail@mon-entreprise.com` |
 | `SMTP_PASSWORD` | Mot de passe SMTP | `votre_mot_de_passe` |
 | `SMTP_SECURE` | Utiliser TLS (true/false) | `false` |
 | `USE_HTTPS` | Activer HTTPS (true/false) | `true` |
@@ -70,22 +68,9 @@ npm run migrate
 
 ### 5. Créer le premier compte administrateur
 ```bash
-npm run create-admin prenom.nom@culture.gouv.fr "Prénom" "Nom"
+npm run create-admin prenom.nom@mon-entreprise.com "Prénom" "Nom"
 ```
 > ⚠️ **Important** : Ce script vous demandera de saisir un mot de passe de manière interactive.
-
-### 5b. Mode authentification Exchange (préparé)
-Le backend supporte maintenant un mode Exchange dédié, sans casser la version actuelle :
-
-```env
-AUTH_MODE=exchange
-EXCHANGE_AUTH_URL=https://exchange.example.local/auth
-ALLOWED_EMAIL_DOMAIN=culture.gouv.fr
-```
-
-Dans ce mode, la route `/api/auth/login` appelle le connecteur Exchange avec les identifiants fournis. Si le connecteur n’est pas configuré, le projet reste compatible en mode local / bypass de secours.
-
-> Le bypass `/api/auth/bypass` est conservé tant que le connecteur Exchange n’est pas branché, pour éviter de bloquer le front en phase de test et de recette.
 
 ### 6. Générer un certificat TLS (optionnel, pour HTTPS)
 ```bash
@@ -172,13 +157,12 @@ Nestor-C2/
 |---------|----------|-------------|
 | POST | `/api/auth/signup` | Inscription (auto-vérification par e-mail) |
 | GET | `/api/auth/verify-email?token=...` | Vérifier l'e-mail |
-| POST | `/api/auth/login` | Connexion locale ou Exchange selon `AUTH_MODE` |
+| POST | `/api/auth/login` | Connexion |
 | POST | `/api/auth/logout` | Déconnexion |
 | POST | `/api/auth/forgot-password` | Demander une réinitialisation |
 | POST | `/api/auth/reset-password` | Réinitialiser le mot de passe |
 | POST | `/api/auth/setup-password` | Configurer le mot de passe (valideurs) |
 | GET | `/api/auth/me` | Vérifier la session active |
-| POST | `/api/auth/bypass` | Bypass de secours conservé pendant la transition |
 
 ### Demandes
 | Méthode | Endpoint | Description |
