@@ -19,6 +19,17 @@ const sampleRequests = [
   { id: 2, ref: 'BR-2024-002', title: 'Réservation de véhicule', category: 'Véhicule', date: '08/08/2026', status: 'traitee' }
 ];
 
+const statusLabels = {
+  brouillon: { label: 'Brouillon', cls: 'status-brouillon' },
+  en_cours: { label: 'En cours', cls: 'status-encours' },
+  en_attente_validation: { label: 'En attente de validation', cls: 'status-encours' },
+  validee_responsable: { label: 'Validée par le responsable', cls: 'status-traitee' },
+  transmise_budget: { label: 'Transmise au service budget', cls: 'status-traitee' },
+  traitee: { label: 'Traitée', cls: 'status-traitee' },
+  annulee: { label: 'Annulée', cls: 'status-annulee' },
+  rejetee: { label: 'Rejetée', cls: 'status-rejetee' },
+};
+
 // -----------------------------------------------------------------------------
 // Données statiques (icônes, catégories, formulaires)
 // -----------------------------------------------------------------------------
@@ -72,6 +83,7 @@ const svgIcons = {
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
   arrowLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 16V8"/><path d="M12 16V5"/><path d="M17 16v-7"/><path d="M5 8h3M10 5h3M15 9h3"/><path d="M6 20V17"/><path d="M18 20V17"/></svg>',
+  Budgets: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>',
   userCheck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 11l2 2 3-3"/></svg>',
   chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
@@ -110,7 +122,7 @@ const categoryForms = {
         icon: 'doorEnter',
         steps: [
           { label: "Pré-requis à la demande d'installation", title: "Pré-requis à la demande d'installation", desc: "Avant de commencer, confirmez les éléments suivants", type: 'checklist', items: ["La date d'arrivée de l'agent est confirmée par le service RH", "Le poste de travail (bureau) est identifié et disponible", "Le responsable hiérarchique de l'agent est informé"] },
-          { label: "Informations sur l'agent concerné", title: "Informations sur l'agent concerné", desc: "Renseignez l'identité du nouvel agent", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail", req: true, type: 'email'}, {label: "Date d'arrivée", req: true, type: 'date'}, {label: "Service / direction", req: true}, {label: "Fonction"}] },
+          { label: "Informations sur l'agent concerné", title: "Informations sur l'agent concerné", desc: "Renseignez l'identité du nouvel agent", type: 'fields', fields: [{label:"Prénom", req:true}, {label:"Nom", req:true}, {label:"E-mail", req:true, type:'email'}, {label:"Date d'arrivée", req:true, type:'date'}, {label:"Service / direction", req:true}, {label:"Fonction"}] },
           { label: "Contexte de l'arrivée", title: "Contexte de l'arrivée", desc: "Précisez le type de contrat et la localisation", type: 'mixed', radio: { label: "Type de contrat", req: true, options: ["Fonctionnaire", "Contractuel", "Stage / alternance", "Vacataire"] }, fields: [{ label: "Site / bâtiment", req: true, options: ["Paris Carrousel", "Paris Flore", "Versailles aile Paris", "Versailles aile Sceaux"] }, { label: "Numéro de bureau" }] },
           { label: "Mobilier", title: "Mobilier", desc: "Sélectionnez les éléments à installer", type: 'checklist', items: ["Bureau", "Chaise ergonomique", "Caisson de rangement", "Armoire", "Porte-manteau"] },
           { label: "Poste de travail informatique", title: "Poste de travail informatique", desc: "Sélectionnez le type d'ordinateur et les accessoires nécessaires", type: 'mixed', radio: { label: "Type d'ordinateur", req: true, options: ["Ordinateur portable MCC", "Ordinateur fixe", "Déjà existant", "Ordinateur mutualisé"] }, fields: [{ label: "Autre précision" }] },
@@ -122,18 +134,18 @@ const categoryForms = {
         ]
       },
       demenagement: { title: "Déménagement d'un agent", ref: "DEM", icon: 'truck', steps: [
-        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le déménagement", desc: "Identité et localisation actuelle/nouvelle", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail professionnel", req: true, type: 'email'}, {label: "Bureau actuel", req: true}, {label: "Nouveau bureau", req: true}, {label: "Date du déménagement", req: true, type: 'date'}] },
+        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le déménagement", desc: "Identité et localisation actuelle/nouvelle", type: 'fields', fields: [{label:"Prénom", req:true}, {label:"Nom", req:true}, {label:"E-mail professionnel", req:true, type:'email'}, {label:"Bureau actuel", req:true}, {label:"Nouveau bureau", req:true}, {label:"Date du déménagement", req:true, type:'date'}] },
         { label: "Mobilier à déménager", title: "Mobilier à déménager", desc: "Sélectionnez les éléments concernés", type: 'checklist', items: ["Bureau","Chaise","Caisson de rangement","Armoire","Étagères"] },
         { label: "Informatique à déménager", title: "Informatique à déménager", desc: "Équipements informatiques à transférer", type: 'checklist', items: ["Unité centrale / portable","Écran(s)","Imprimante","Périphériques (souris, clavier...)"] },
-        { label: "Téléphonie à déménager", title: "Téléphonie à déménager", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label: "Action requise", options: ["Transfert du poste existant","Nouvelle ligne","Aucune action"]}, fields: [] },
+        { label: "Téléphonie à déménager", title: "Téléphonie à déménager", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label:"Action requise", options:["Transfert du poste existant","Nouvelle ligne","Aucune action"]}, fields: [] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       depart: { title: "Départ d'un agent", ref: "DEP", icon: 'doorExit', steps: [
-        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le départ", desc: "Identité et date de départ", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail professionnel", req: true, type: 'email'}, {label: "Date de départ", req: true, type: 'date'}, {label: "Motif du départ"}] },
+        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le départ", desc: "Identité et date de départ", type: 'fields', fields: [{label:"Prénom", req:true}, {label:"Nom", req:true}, {label:"E-mail professionnel", req:true, type:'email'}, {label:"Date de départ", req:true, type:'date'}, {label:"Motif du départ"}] },
         { label: "Mobilier à récupérer", title: "Mobilier à récupérer", desc: "Sélectionnez les éléments à reprendre", type: 'checklist', items: ["Bureau","Chaise","Caisson de rangement","Armoire"] },
         { label: "Matériel informatique à récupérer", title: "Matériel informatique à récupérer", desc: "Équipements à restituer", type: 'checklist', items: ["Ordinateur portable / fixe","Écran(s)","Badge d'accès","Périphériques", "Téléphone mobile professionnel"] },
-        { label: "Matériel de téléphonie à récupérer", title: "Matériel de téléphonie à récupérer", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label: "Action sur la ligne", options: ["Clôture définitive","Réaffectation à un autre agent"]}, fields: [] },
-          {desc: "Pour rappel, les badges d'accès sont à restituer obligatoirement au service RH."}, 
+        { label: "Matériel de téléphonie à récupérer", title: "Matériel de téléphonie à récupérer", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label:"Action sur la ligne", options:["Clôture définitive","Réaffectation à un autre agent"]}, fields: [] },
+          {desc: "Pour rappel, les Badges d'acces sont a restitués obligatoirement au service RH"}, 
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -143,28 +155,28 @@ const categoryForms = {
     title: 'Fournitures',
     forms: {
       signaletique: { title: "Signalétique de bureau", ref: "SIG", icon: 'tag', steps: [
-        { label: "Votre demande", title: "Signalétique de bureau", desc: "Décrivez votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Bureau concerné", req: true},{label: "Texte souhaité sur la plaque", req: true},{label: "Quantité"}] }
+        { label: "Votre demande", title: "Signalétique de bureau", desc: "Décrivez votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Bureau concerné", req:true},{label:"Texte souhaité sur la plaque", req:true},{label:"Quantité"}] }
       ]},
       cartons: { title: "Cartons d'archives et d'élimination", ref: "CAE", icon: 'box', steps: [
-        { label: "Votre demande", title: "Cartons d'archives et d'élimination", desc: "Précisez votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Nombre de cartons", req: true},{label: "Type (archive / élimination)", req: true}] },
+        { label: "Votre demande", title: "Cartons d'archives et d'élimination", desc: "Précisez votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Nombre de cartons", req:true},{label:"Type (archive / élimination)", req:true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       dossier_srh: { title: "Dossier spécifique SRH", ref: "SRH", icon: 'folder', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Nature du dossier demandé", req: true}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Nature du dossier demandé", req:true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       courantes: { title: "Fournitures courantes", ref: "FCO", icon: 'pencil', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Articles souhaités", req: true},{label: "Quantité"}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Articles souhaités", req:true},{label:"Quantité"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       sanitaires: { title: "Fournitures sanitaires", ref: "FSA", icon: 'droplet', steps: [
-        { label: "Identité du demandeur", title: "Fournitures sanitaires", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Articles souhaités", req: true}] }
+        { label: "Identité du demandeur", title: "Fournitures sanitaires", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Articles souhaités", req:true}] }
       ]},
       specifiques: { title: "Fournitures spécifiques", ref: "FSP", icon: 'stars', steps: [
-        { label: "Identité du demandeur", title: "Fournitures spécifiques", desc: "Décrivez votre besoin particulier", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] }
+        { label: "Identité du demandeur", title: "Fournitures spécifiques", desc: "Décrivez votre besoin particulier", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description du besoin", req:true, type:'textarea'}] }
       ]},
       tampons: { title: "Tampons", ref: "TAM", icon: 'stamp', steps: [
-        { label: "Identité du demandeur", title: "Tampons", desc: "Renseignez le texte souhaité sur le tampon", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Texte du tampon", req: true},{label: "Quantité"}] }
+        { label: "Identité du demandeur", title: "Tampons", desc: "Renseignez le texte souhaité sur le tampon", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Texte du tampon", req:true},{label:"Quantité"}] }
       ]}
     }
   },
@@ -183,9 +195,12 @@ const categoryForms = {
             desc: "Renseignez vos coordonnées", 
             type: 'fields', 
             fields: [
-              {label: "Nom", req: true, type: 'text'},
-              {label: "Prénom", req: true, type: 'text'},
-              {label: "Direction", req: true, type: 'text'}
+              {label:"Nom", req:true, type:'text'},
+              {label:"Prénom", req:true, type:'text'},
+              {label:"Direction", req:true, type:'text'},
+              {label:"Responsable valideur - Nom", req:true, type:'text'},
+              {label:"Responsable valideur - Prénom", req:true, type:'text'},
+              {label:"Responsable valideur - Adresse e-mail", req:true, type:'email'}
             ] 
           },
           { 
@@ -194,10 +209,10 @@ const categoryForms = {
             desc: "Renseignez les informations du fournisseur", 
             type: 'fields', 
             fields: [
-              {label: "Nom", req: true, type: 'text'},
-              {label: "Adresse", req: true, type: 'text'},
-              {label: "Mail du fournisseur", req: true, type: 'text'},
-              {label: "Si nouveau fournisseur, numéro de SIRET et RIB obligatoires", req: false, type: 'text'}
+              {label:"Nom", req:true, type:'text'},
+              {label:"Adresse", req:true, type:'text'},
+              {label:"Mail du fournisseur", req:true, type:'text'},
+              {label:"Si nouveau fournisseur, numéro de SIRET et RIB obligatoires", req:false, type:'text'}
             ] 
           },
           { 
@@ -205,18 +220,18 @@ const categoryForms = {
             title: "Nature de la commande", 
             desc: "Précisez les détails de la commande", 
             type: 'mixed', 
-            radio: {label: "Type de commande", req: true, options: ["de l'acquisition","de la prestation"]}, 
+            radio: {label:"Type de commande", req:true, options:["de l'acquisition","de la prestation"]}, 
             fields: [
-              {label: "Titre de la commande", req: true, type: 'text'},
-              {label: "Justification", req: true, type: 'text'},
-              {label: "Si dépense dans le cadre d'un projet spécifique (européen, PNCR) préciser lequel", req: false, type: 'text'},
-              {label: "Montant de la commande", req: true, type: 'text'}
+              {label:"Titre de la commande", req:true, type:'text'},
+              {label:"Justification", req:true, type:'text'},
+              {label:"Si dépense dans le cadre d'un projet spécifique (européen, PNCR) préciser lequel", req:false, type:'text'},
+              {label:"Montant de la commande", req:true, type:'text'}
             ] 
           },
           { 
             label: "Rappel des procédures", 
             title: "Rappel des procédures", 
-            desc: "Pour rappel, les procédures applicables à la commande publique sont les suivantes :", 
+            desc: "Pour rappel, les procédures applicables à la commande publique sont les suivantes", 
             type: 'fixed', 
             content: "<ul><li>Si dépense inférieure à 40 000 € HT : plusieurs devis souhaitables, publicité non obligatoire</li><li>Si dépense comprise entre 40 000€ HT et 90 000€ HT : établissement d'un cahier des charges pour un marché à procédure adaptée, publicité libre ou adaptée</li><li>Si dépense supérieure à 90 000 € HT et inférieure à 140 000 € HT : établissement d'un cahier des charges et publication au BOAMP ou dans un JAL</li><li>Si dépense supérieure à 140 000 HT : publication au BOAMP et au JOUE et recours obligatoire à la procédure formalisée des marchés publics</li></ul>"
           },
@@ -230,7 +245,7 @@ const categoryForms = {
             max_files: 10,
             required: false
           },
-          { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
+          { label: "Validation du responsable", title: "Validation du responsable", desc: "Vérifiez le récapitulatif avant de transmettre la demande au responsable valideur", type: 'summary' }
         ]
       }
     }
@@ -240,8 +255,8 @@ const categoryForms = {
     title: 'Ménage',
     forms: {
       menage_general: { title: "Ménage, désinfestation et déchets", ref: "MEN", icon: 'spray', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Site / bâtiment", req: true}] },
-        { label: "Votre demande", title: "Votre demande", desc: "Précisez la nature de l'intervention", type: 'mixed', radio: {label: "Type d'intervention", req: true, options: ["Ménage ponctuel","Désinfestation","Enlèvement de déchets"]}, fields: [{label: "Précisions complémentaires"}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Site / bâtiment", req:true}] },
+        { label: "Votre demande", title: "Votre demande", desc: "Précisez la nature de l'intervention", type: 'mixed', radio: {label:"Type d'intervention", req:true, options:["Ménage ponctuel","Désinfestation","Enlèvement de déchets"]}, fields: [{label:"Précisions complémentaires"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -251,11 +266,11 @@ const categoryForms = {
     title: 'Intervention technique',
     forms: {
       ascenseur: { title: "Ascenseur", ref: "ASC", icon: 'stairs', steps: [
-        { label: "Votre demande", title: "Ascenseur", desc: "Décrivez le problème constaté", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Site / bâtiment", req: true},{label: "Description du problème", req: true, type: 'textarea'}] }
+        { label: "Votre demande", title: "Ascenseur", desc: "Décrivez le problème constaté", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Site / bâtiment", req:true},{label:"Description du problème", req:true, type:'textarea'}] }
       ]},
       intervention: { title: "Demande d'intervention technique", ref: "ITE", icon: 'tool', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Site / bâtiment", req: true}] },
-        { label: "Votre demande", title: "Votre demande", desc: "Décrivez l'intervention nécessaire", type: 'mixed', radio: {label: "Domaine concerné", options: ["Électricité","Plomberie","Chauffage / climatisation","Autre"]}, fields: [{label: "Description du problème", req: true, type: 'textarea'}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Site / bâtiment", req:true}] },
+        { label: "Votre demande", title: "Votre demande", desc: "Décrivez l'intervention nécessaire", type: 'mixed', radio: {label:"Domaine concerné", options:["Électricité","Plomberie","Chauffage / climatisation","Autre"]}, fields: [{label:"Description du problème", req:true, type:'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -265,24 +280,24 @@ const categoryForms = {
     title: 'Accès aux sites',
     forms: {
       acces_exceptionnel: { title: "Autorisation d'accès exceptionnel", ref: "AEX", icon: 'clock', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez la période concernée", type: 'fields', fields: [{label: "Date et heure d'arrivée", req: true},{label: "Date et heure de départ", req: true},{label: "Motif", req: true, type: 'textarea'}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
+        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez la période concernée", type: 'fields', fields: [{label:"Date et heure d'arrivée", req:true},{label:"Date et heure de départ", req:true},{label:"Motif", req:true, type:'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       perte_badge: { title: "Déclaration de perte du badge", ref: "PBA", icon: 'badgeOff', steps: [
-        { label: "Identité du demandeur", title: "Déclaration de perte du badge", desc: "Renseignez vos coordonnées et les circonstances", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Date de la perte", req: true, type: 'date'},{label: "Circonstances"}] },
+        { label: "Identité du demandeur", title: "Déclaration de perte du badge", desc: "Renseignez vos coordonnées et les circonstances", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Date de la perte", req:true, type:'date'},{label:"Circonstances"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       cle_bureau: { title: "Clé de bureau", ref: "CLE", icon: 'key', steps: [
-        { label: "Votre demande", title: "Clé de bureau", desc: "Renseignez votre demande", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Numéro de bureau", req: true},{label: "Motif"}] }
+        { label: "Votre demande", title: "Clé de bureau", desc: "Renseignez votre demande", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Numéro de bureau", req:true},{label:"Motif"}] }
       ]},
       acces_prestataire: { title: "Autorisation d'accès prestataire ou autre personne extérieure", ref: "APR", icon: 'userPlus', steps: [
-        { label: "Votre demande", title: "Votre demande", desc: "Décrivez le contexte de l'intervention", type: 'fields', fields: [{label: "Prénom du demandeur", req: true},{label: "Nom du demandeur", req: true},{label: "Date(s) d'intervention", req: true},{label: "Motif de l'accès", req: true}] },
-        { label: "Les intervenants", title: "Les intervenants", desc: "Identité des personnes externes concernées", type: 'fields', fields: [{label: "Nom complet intervenant 1", req: true},{label: "Société", req: true},{label: "Nom complet intervenant 2 (optionnel)"}] }
+        { label: "Votre demande", title: "Votre demande", desc: "Décrivez le contexte de l'intervention", type: 'fields', fields: [{label:"Prénom du demandeur", req:true},{label:"Nom du demandeur", req:true},{label:"Date(s) d'intervention", req:true},{label:"Motif de l'accès", req:true}] },
+        { label: "Les intervenants", title: "Les intervenants", desc: "Identité des personnes externes concernées", type: 'fields', fields: [{label:"Nom complet intervenant 1", req:true},{label:"Société", req:true},{label:"Nom complet intervenant 2 (optionnel)"}] }
       ]},
       modif_droits: { title: "Modification des droits du badge", ref: "MDB", icon: 'shieldLock', steps: [
-        { label: "Agent concerné", title: "Agent concerné", desc: "Identifiez l'agent dont les droits doivent être modifiés", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Numéro de badge"}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez les zones d'accès concernées", type: 'fields', fields: [{label: "Zones à ajouter"},{label: "Zones à retirer"},{label: "Justification", req: true}] },
+        { label: "Agent concerné", title: "Agent concerné", desc: "Identifiez l'agent dont les droits doivent être modifiés", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Numéro de badge"}] },
+        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez les zones d'accès concernées", type: 'fields', fields: [{label:"Zones à ajouter"},{label:"Zones à retirer"},{label:"Justification", req:true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -292,19 +307,19 @@ const categoryForms = {
     title: 'Livraison, Envoi et Manutention',
     forms: {
       livraison: { title: "Livraison", ref: "LIV", icon: 'truckDelivery', steps: [
-        { label: "Identité du demandeur et sélection du type de livraison", title: "Livraison", desc: "Renseignez les détails de la livraison attendue", type: 'mixed', radio: {label: "Type de livraison", options: ["Colis","Palette","Courrier volumineux"]}, fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date prévue"}] },
+        { label: "Identité du demandeur et sélection du type de livraison", title: "Livraison", desc: "Renseignez les détails de la livraison attendue", type: 'mixed', radio: {label:"Type de livraison", options:["Colis","Palette","Courrier volumineux"]}, fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Date prévue"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       signaler_envoi: { title: "Signaler un envoi à la cellule courrier", ref: "SEC", icon: 'mailForward', steps: [
-        { label: "Identité du demandeur et sélection du type de livraison", title: "Signaler un envoi", desc: "Renseignez les détails de l'envoi", type: 'mixed', radio: {label: "Type d'envoi", options: ["Courrier standard","Recommandé","Colis"]}, fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Destinataire"}] },
+        { label: "Identité du demandeur et sélection du type de livraison", title: "Signaler un envoi", desc: "Renseignez les détails de l'envoi", type: 'mixed', radio: {label:"Type d'envoi", options:["Courrier standard","Recommandé","Colis"]}, fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Destinataire"}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       manutention: { title: "Manutention sur site", ref: "MAN", icon: 'forklift', steps: [
-        { label: "Identité du demandeur", title: "Manutention sur site", desc: "Décrivez le besoin de manutention", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] },
+        { label: "Identité du demandeur", title: "Manutention sur site", desc: "Décrivez le besoin de manutention", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description du besoin", req:true, type:'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       livraison_quai: { title: "Signaler une livraison ou un enlèvement au quai", ref: "LEQ", icon: 'truckLoading', steps: [
-        { label: "Identité du demandeur", title: "Signaler une livraison ou un enlèvement au quai", desc: "Renseignez les coordonnées et l'horaire", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date et heure prévues", req: true},{label: "Nature (livraison / enlèvement)", req: true}] },
+        { label: "Identité du demandeur", title: "Signaler une livraison ou un enlèvement au quai", desc: "Renseignez les coordonnées et l'horaire", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Date et heure prévues", req:true},{label:"Nature (livraison / enlèvement)", req:true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -314,11 +329,11 @@ const categoryForms = {
     title: 'Équipements de bureau',
     forms: {
       mobilier_standard: { title: "Mobilier standard", ref: "MST", icon: 'armchair', steps: [
-        { label: "Identité du demandeur", title: "Mobilier standard", desc: "Renseignez vos coordonnées et le mobilier souhaité", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Mobilier souhaité", req: true}] },
+        { label: "Identité du demandeur", title: "Mobilier standard", desc: "Renseignez vos coordonnées et le mobilier souhaité", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Mobilier souhaité", req:true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       equip_specifiques: { title: "Équipements spécifiques de bureau", ref: "ESB", icon: 'desk', steps: [
-        { label: "Identité du demandeur", title: "Équipements spécifiques de bureau", desc: "Décrivez le besoin particulier", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] },
+        { label: "Identité du demandeur", title: "Équipements spécifiques de bureau", desc: "Décrivez le besoin particulier", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description du besoin", req:true, type:'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
@@ -328,7 +343,7 @@ const categoryForms = {
     title: 'Véhicule',
     forms: {
       reservation: { title: "Réservation de véhicule seul", ref: "VEH", icon: 'car', steps: [
-        { label: "Votre demande", title: "Réservation de véhicule seul", desc: "Renseignez les détails de votre réservation", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date et heure de départ", req: true},{label: "Date et heure de retour", req: true},{label: "Motif du déplacement"}] }
+        { label: "Votre demande", title: "Réservation de véhicule seul", desc: "Renseignez les détails de votre réservation", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Date et heure de départ", req:true},{label:"Date et heure de retour", req:true},{label:"Motif du déplacement"}] }
       ]}
     }
   },
@@ -337,35 +352,35 @@ const categoryForms = {
     title: 'Événementiel',
     forms: {
       accueil_cafe: { title: "Accueil café, croissants", ref: "ACC", icon: 'coffee', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Lieu et date de l'événement", title: "Lieu et date de l'événement", desc: "Précisez les modalités", type: 'fields', fields: [{label: "Date", req: true, type: 'date'},{label: "Lieu", req: true},{label: "Nombre de personnes", req: true}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
+        { label: "Lieu et date de l'événement", title: "Lieu et date de l'événement", desc: "Précisez les modalités", type: 'fields', fields: [{label:"Date", req:true, type:'date'},{label:"Lieu", req:true},{label:"Nombre de personnes", req:true}] },
         { label: "Bon de commande et facturation", title: "Bon de commande et facturation", desc: "Sélectionnez les articles souhaités", type: 'checklist', items: ["Café","Thé","Croissants / viennoiseries","Jus de fruits","Eau"] },
-        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label: "Code budgétaire / centre de coûts", req: true}] },
+        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label:"Code budgétaire / centre de coûts", req:true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       coupon_repas: { title: "Coupon repas", ref: "CRE", icon: 'ticket', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Commande", title: "Commande", desc: "Précisez le nombre de coupons", type: 'fields', fields: [{label: "Nombre de coupons", req: true},{label: "Date d'utilisation prévue"}] },
-        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label: "Code budgétaire / centre de coûts", req: true}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
+        { label: "Commande", title: "Commande", desc: "Précisez le nombre de coupons", type: 'fields', fields: [{label:"Nombre de coupons", req:true},{label:"Date d'utilisation prévue"}] },
+        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label:"Code budgétaire / centre de coûts", req:true}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       materiel_evenementiel: { title: "Matériel d'événementiel et de réunion", ref: "MER", icon: 'presentation', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Lieu et prestation", title: "Lieu et prestation", desc: "Précisez le matériel et le lieu", type: 'mixed', radio: {label: "Matériel souhaité", options: ["Vidéoprojecteur","Sonorisation","Mobilier de réunion","Visioconférence"]}, fields: [{label: "Lieu / salle", req: true},{label: "Date", req: true, type: 'date'}] },
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
+        { label: "Lieu et prestation", title: "Lieu et prestation", desc: "Précisez le matériel et le lieu", type: 'mixed', radio: {label:"Matériel souhaité", options:["Vidéoprojecteur","Sonorisation","Mobilier de réunion","Visioconférence"]}, fields: [{label:"Lieu / salle", req:true},{label:"Date", req:true, type:'date'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]}
     }
   },
 
- // 'oeuvres-art': {
-  //  title: "Œuvres et objets d'art",
-   // forms: {
-    //  depot_oeuvres: { title: "Dépôt d'œuvres et objets d'art", ref: "OEA", icon: 'palette', steps: [
-     //   { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description de l'œuvre", req: true, type: 'textarea'}] },
-      //  { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-     // ]}
-   // }
- // }
+  'oeuvres-art': {
+    title: "Œuvres et objets d'art",
+    forms: {
+      depot_oeuvres: { title: "Dépôt d'œuvres et objets d'art", ref: "OEA", icon: 'palette', steps: [
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Description de l'œuvre", req:true, type:'textarea'}] },
+        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
+      ]}
+    }
+  }
 };
 
 // -----------------------------------------------------------------------------
@@ -386,12 +401,12 @@ function getDomain(email) {
 // Vérifier si le domaine est autorisé. Par défaut, le domaine attendu est
 // culture.gouv.fr, et il peut être surchargé depuis la configuration du front.
 function isAllowedDomain(email) {
-  const allowedDomains = (window.ALLOWED_EMAIL_DOMAIN || 'culture.gouv.fr')
+  const allowedDomains = ['culture.gouv.fr', ...(window.ALLOWED_EMAIL_DOMAIN || '')
     .split(',')
-    .map((d) => d.trim().toLowerCase())
-    .filter(Boolean);
+    .map((d) => d.trim().toLowerCase().replace(/^@/, '').replace(/\.$/, ''))
+    .filter(Boolean)];
 
-  return allowedDomains.includes(getDomain(email));
+  return [...new Set(allowedDomains)].includes(getDomain(email).replace(/\.$/, ''));
 }
 
 // Vérifier la force du mot de passe
@@ -442,7 +457,7 @@ function parseJsonResponse(response) {
     try {
       return JSON.parse(text);
     } catch (err) {
-      console.warn('Réponse non JSON ignorée: ', text.slice(0, 160));
+      console.warn('Réponse non JSON ignorée:', text.slice(0, 160));
       return {};
     }
   });
@@ -463,7 +478,7 @@ async function checkAuth() {
       showUnauthenticatedUI();
     }
   } catch (err) {
-    console.error('Erreur auth: ', err);
+    console.error('Erreur auth:', err);
     currentUser = null;
     showUnauthenticatedUI();
   }
@@ -473,12 +488,287 @@ async function checkAuth() {
 function showAuthenticatedUI() {
   document.getElementById('screen-connexion').style.display = 'none';
   document.getElementById('screen-accueil').style.display = 'block';
+  setAdminPanelVisibility();
 }
 
 // Afficher l'UI non connectée
 function showUnauthenticatedUI() {
   document.getElementById('screen-connexion').style.display = 'block';
   document.getElementById('screen-accueil').style.display = 'none';
+  setAdminPanelVisibility(false);
+}
+
+function setAdminPanelVisibility(forceVisible) {
+  const toggle = document.getElementById('admin-panel-toggle');
+  const panel = document.getElementById('admin-panel');
+  const isAdmin = !!(currentUser && currentUser.role === 'superAdmin');
+  const shouldShow = typeof forceVisible === 'boolean' ? forceVisible : isAdmin;
+
+  if (toggle) toggle.style.display = shouldShow ? 'inline-flex' : 'none';
+  if (panel) panel.style.display = shouldShow ? 'block' : 'none';
+
+  if (shouldShow && isAdmin) {
+    renderAdminUsers();
+    renderAdminRequests();
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  })[character]);
+}
+
+async function renderAdminUsers() {
+  if (!currentUser || !['admin', 'administrateur'].includes(currentUser.role)) return;
+
+  try {
+    const response = await fetch('/api/admin/users');
+    const data = await parseJsonResponse(response);
+
+    const list = document.getElementById('admin-user-list');
+    if (!list) return;
+
+    if (!response.ok || !Array.isArray(data.users)) {
+      list.innerHTML = '<div class="admin-empty-state">Impossible de charger les comptes.</div>';
+      return;
+    }
+
+    if (data.users.length === 0) {
+      list.innerHTML = '<div class="admin-empty-state">Aucun compte enregistré.</div>';
+      return;
+    }
+
+    list.innerHTML = data.users.map(user => {
+      const roleKey = (user.role || 'agent').toLowerCase();
+      const roleClass = roleKey === 'validator' || roleKey === 'valideur' ? 'role-validator' : roleKey === 'admin' ? 'role-admin' : 'role-agent';
+      const statusKey = (user.status || 'active').toLowerCase();
+      const statusClass = statusKey === 'expired' ? 'status-expired' : statusKey === 'pending' ? 'status-pending' : 'status-active';
+      const isExpired = !!user.is_expired;
+      const canDelete = isExpired || (user.status === 'pending' && user.created_at && new Date(user.created_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+
+      return `
+        <div class="admin-user-item">
+          <div class="admin-user-header">
+            <div>
+              <div class="admin-user-name">${escapeHtml((user.first_name || '').trim() || '-')} ${escapeHtml((user.last_name || '').trim() || '')}</div>
+              <div class="admin-user-email">${escapeHtml(user.email)}</div>
+            </div>
+            ${canDelete ? `<button class="admin-delete-btn" type="button" onclick="deleteAdminUser(${user.id})">Supprimer</button>` : ''}
+          </div>
+          <div class="admin-user-meta">
+            <span class="admin-badge ${roleClass}">${roleKey === 'validator' || roleKey === 'valideur' ? 'Valideur' : roleKey === 'admin' ? 'Admin' : 'Agent'}</span>
+            <span class="admin-badge ${statusClass}">${statusKey.toUpperCase()}</span>
+            ${isExpired ? '<span class="admin-badge status-expired">Expiré</span>' : ''}
+          </div>
+          <div class="admin-user-edit">
+            <input type="text" id="admin-edit-firstname-${user.id}" value="${escapeHtml(user.first_name)}" aria-label="Prénom">
+            <input type="text" id="admin-edit-lastname-${user.id}" value="${escapeHtml(user.last_name)}" aria-label="Nom">
+            <input type="email" id="admin-edit-email-${user.id}" value="${escapeHtml(user.email)}" aria-label="E-mail">
+            <select id="admin-edit-role-${user.id}" aria-label="Rôle">
+              <option value="agent" ${roleKey === 'agent' ? 'selected' : ''}>Agent</option>
+              <option value="validator" ${roleKey === 'validator' || roleKey === 'valideur' ? 'selected' : ''}>Valideur</option>
+              <option value="admin" ${roleKey === 'admin' ? 'selected' : ''}>Administrateur</option>
+              <option value="superAdmin" ${roleKey === 'superadmin' ? 'selected' : ''}>SuperAdmin</option>
+            </select>
+            <select id="admin-edit-status-${user.id}" aria-label="Statut">
+              <option value="active" ${statusKey === 'active' ? 'selected' : ''}>Actif</option>
+              <option value="pending" ${statusKey === 'pending' ? 'selected' : ''}>En attente</option>
+              <option value="expired" ${statusKey === 'expired' ? 'selected' : ''}>Expiré</option>
+            </select>
+            <button class="admin-save-btn" type="button" onclick="saveAdminUser(${user.id})">Enregistrer les modifications</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('[admin/users] Erreur de chargement :', err);
+    const list = document.getElementById('admin-user-list');
+    if (list) {
+      list.innerHTML = '<div class="admin-empty-state">Impossible de charger les comptes.</div>';
+    }
+  }
+}
+
+async function saveAdminUser(userId) {
+  const payload = {
+    firstName: document.getElementById(`admin-edit-firstname-${userId}`).value.trim(),
+    lastName: document.getElementById(`admin-edit-lastname-${userId}`).value.trim(),
+    email: document.getElementById(`admin-edit-email-${userId}`).value.trim(),
+    role: document.getElementById(`admin-edit-role-${userId}`).value,
+    status: document.getElementById(`admin-edit-status-${userId}`).value,
+  };
+
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || 'Modification impossible.');
+      return;
+    }
+    await renderAdminUsers();
+    alert(data.message || 'Compte modifié.');
+  } catch (err) {
+    console.error('[admin/update-user] Erreur :', err);
+    alert('Erreur lors de la modification du compte.');
+  }
+}
+
+async function renderAdminRequests() {
+  if (!currentUser || currentUser.role !== 'superAdmin') return;
+
+  const list = document.getElementById('admin-request-list');
+  if (!list) return;
+
+  try {
+    const response = await fetch('/api/admin/requests');
+    const data = await parseJsonResponse(response);
+    if (!response.ok || !Array.isArray(data.requests)) {
+      list.innerHTML = '<div class="admin-empty-state">Impossible de charger les demandes.</div>';
+      return;
+    }
+
+    const filter = document.getElementById('admin-request-status-filter')?.value || 'all';
+    const requests = data.requests.filter(request => filter === 'all' || request.status === filter);
+    if (requests.length === 0) {
+      list.innerHTML = '<div class="admin-empty-state">Aucune demande pour ce filtre.</div>';
+      return;
+    }
+
+    list.innerHTML = requests.map(request => `
+      <div class="admin-request-item">
+        <div>
+          <div class="admin-request-title">${escapeHtml(request.title)}</div>
+          <div class="admin-request-meta">${escapeHtml(request.reference || '-')} · ${escapeHtml(request.user_email || '-')} · ${request.created_at ? new Date(request.created_at).toLocaleDateString('fr-FR') : '-'}</div>
+        </div>
+        <div class="admin-request-controls">
+          <select class="admin-request-status" id="admin-request-status-${request.id}" aria-label="Statut de la demande">
+            <option value="en_cours" ${request.status === 'en_cours' ? 'selected' : ''}>En cours</option>
+            <option value="traitee" ${request.status === 'traitee' ? 'selected' : ''}>Traitée</option>
+            <option value="rejetee" ${request.status === 'rejetee' ? 'selected' : ''}>Rejetée</option>
+            <option value="annulee" ${request.status === 'annulee' ? 'selected' : ''}>Annulée</option>
+          </select>
+          <button class="admin-save-btn" type="button" onclick="saveAdminRequest(${request.id})">Enregistrer</button>
+        </div>
+      </div>
+    `).join('');
+  } catch (err) {
+    console.error('[admin/requests] Erreur :', err);
+    list.innerHTML = '<div class="admin-empty-state">Impossible de charger les demandes.</div>';
+  }
+}
+
+async function saveAdminRequest(requestId) {
+  const status = document.getElementById(`admin-request-status-${requestId}`).value;
+  try {
+    const response = await fetch(`/api/admin/requests/${requestId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || 'Modification impossible.');
+      return;
+    }
+    await renderAdminRequests();
+  } catch (err) {
+    console.error('[admin/update-request] Erreur :', err);
+    alert('Erreur lors de la modification de la demande.');
+  }
+}
+
+function showAdminSection(section) {
+  if (!currentUser || currentUser.role !== 'superAdmin') return;
+  const usersSection = document.getElementById('admin-users-section');
+  const requestsSection = document.getElementById('admin-requests-section');
+  const usersTab = document.getElementById('admin-section-users-tab');
+  const requestsTab = document.getElementById('admin-section-requests-tab');
+  const showUsers = section === 'users';
+
+  usersSection.style.display = showUsers ? 'grid' : 'none';
+  requestsSection.style.display = showUsers ? 'none' : 'block';
+  usersTab.classList.toggle('active', showUsers);
+  requestsTab.classList.toggle('active', !showUsers);
+  if (!showUsers) renderAdminRequests();
+}
+
+function refreshAdminData() {
+  if (!currentUser || currentUser.role !== 'superAdmin') return;
+  renderAdminUsers();
+  renderAdminRequests();
+}
+
+async function deleteAdminUser(userId) {
+  if (!userId) return;
+
+  const confirmed = window.confirm('Supprimer ce compte expiré ?');
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      alert(data.error || 'Suppression impossible.');
+      return;
+    }
+
+    await renderAdminUsers();
+    alert(data.message || 'Compte supprimé.');
+  } catch (err) {
+    console.error('[admin/delete-user] Erreur :', err);
+    alert('Erreur lors de la suppression.');
+  }
+}
+
+function toggleAdminPanel() {
+  const panel = document.getElementById('admin-panel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function bindAdminForm() {
+  const form = document.getElementById('admin-create-user-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      firstName: document.getElementById('admin-firstname').value.trim(),
+      lastName: document.getElementById('admin-lastname').value.trim(),
+      email: document.getElementById('admin-email').value.trim(),
+      password: document.getElementById('admin-password').value,
+      role: document.getElementById('admin-role').value,
+    };
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await parseJsonResponse(response);
+
+      if (!response.ok) {
+        alert(data.error || 'Erreur lors de la création du compte.');
+        return;
+      }
+
+      form.reset();
+      await renderAdminUsers();
+      alert(data.message || 'Compte créé avec succès.');
+    } catch (err) {
+      console.error('[admin/create-user] Erreur réseau :', err);
+      alert('Erreur réseau lors de la création du compte.');
+    }
+  });
 }
 
 function updateUIForAuthState() {
@@ -527,7 +817,12 @@ async function trySubmitLogin() {
   if (!email || !isValidEmailFormat(email)) {
     errEmail.style.display = 'block';
     ok = false;
+  } else if (!isAllowedDomain(email)) {
+    errEmail.textContent = 'Utilisez une adresse e-mail @culture.gouv.fr.';
+    errEmail.style.display = 'block';
+    ok = false;
   } else {
+    errEmail.textContent = 'Veuillez saisir une adresse e-mail valide.';
     errEmail.style.display = 'none';
   }
   if (!pass) {
@@ -552,11 +847,12 @@ async function trySubmitLogin() {
       currentUser = data.user;
       showAuthenticatedUI();
       renderSuiviLists();
+      setAdminPanelVisibility();
     } else {
       alert(data.error || 'Erreur de connexion.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
+    console.error('Erreur:', err);
     alert('Erreur de connexion. Vérifiez votre connexion Internet.');
   }
 }
@@ -587,7 +883,7 @@ async function trySubmitForgot() {
       alert(data.error || 'Erreur.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
+    console.error('Erreur:', err);
     alert('Erreur. Vérifiez votre connexion Internet.');
   }
 }
@@ -641,7 +937,7 @@ async function trySubmitSignup() {
       alert(data.error || 'Erreur lors de l\'inscription.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
+    console.error('Erreur:', err);
     alert('Erreur lors de l\'inscription. Vérifiez votre connexion Internet.');
   }
 }
@@ -653,7 +949,7 @@ async function logout() {
     currentUser = null;
     showUnauthenticatedUI();
   } catch (err) {
-    console.error('Erreur: ', err);
+    console.error('Erreur:', err);
   }
 }
 
@@ -718,23 +1014,6 @@ function getCurrentForm() {
   return categoryForms[currentCategoryKey].forms[currentFormKey];
 }
 
-// Gestion du téléchargement de fichiers
-document.getElementById('file-upload').addEventListener('change', function(e) {
-  const fileList = document.getElementById('file-list');
-  fileList.innerHTML = ''; // Réinitialiser la liste
-
-  const files = e.target.files;
-  if (files.length === 0) return;
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const fileItem = document.createElement('div');
-    fileItem.className = 'file-item';
-    fileItem.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} Mo)`;
-    fileList.appendChild(fileItem);
-  }
-});
-
 // Soumettre un formulaire
 async function submitForm() {
   const form = getCurrentForm();
@@ -757,6 +1036,7 @@ async function submitForm() {
     const data = await response.json();
     
     if (response.ok) {
+      const isExpenseRequest = currentCategoryKey === 'budget' && currentFormKey === 'proposition_depenses';
       // Ajouter à la liste locale
       submittedRequests.unshift({
         id: data.request.id,
@@ -771,10 +1051,10 @@ async function submitForm() {
       document.getElementById('wz-main').innerHTML = `
         <div class="wz-success">
           <div class="wz-success-icon">${icon('check')}</div>
-          <div class="wz-success-title">Demande envoyée</div>
-          <div class="wz-success-text">Votre demande « ${form.title} » a été transmise.</div>
+          <div class="wz-success-title">${isExpenseRequest ? 'Demande envoyée au responsable' : 'Demande envoyée'}</div>
+          <div class="wz-success-text">${isExpenseRequest ? 'Votre demande de dépense attend maintenant la validation du responsable indiqué.' : `Votre demande « ${form.title} » a été transmise.`}</div>
           <div class="wz-success-ref">Référence : <strong>${data.request.reference}</strong></div>
-          <button class="wz-btn-primary" style="margin-top: 18px;" onclick="backToAccueil()">Retour à l'accueil</button>
+          <button class="wz-btn-primary" style="margin-top:18px;" onclick="backToAccueil()">Retour à l'accueil</button>
         </div>
       `;
       document.getElementById('wz-footer').style.display = 'none';
@@ -783,55 +1063,11 @@ async function submitForm() {
       alert(data.error || 'Erreur lors de l\'envoi.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
+    console.error('Erreur:', err);
     alert('Erreur de connexion.');
   }
 }
-// Fonction pour soumettre une demande
-async function submitRequest() {
-  const formData = {
-    // Récupérer les données du formulaire
-    ref: document.getElementById('request-ref').value,
-    title: document.getElementById('request-title').value,
-    // Ajouter d'autres champs ici
-  };
 
-  const fileInput = document.getElementById('file-upload');
-  const files = fileInput.files;
-
-  if (files.length === 0) {
-    alert('Veuillez sélectionner au moins un fichier.');
-    return;
-  }
-
-  // Créer un objet FormData pour envoyer les fichiers
-  const data = new FormData();
-  data.append('formData', JSON.stringify(formData));
-  data.append('email', currentUser.email);
-  data.append('firstName', currentUser.firstName);
-
-  // Ajouter les fichiers
-  for (let i = 0; i < files.length; i++) {
-    data.append('files', files[i]);
-  }
-
-  try {
-    const response = await fetch('/api/requests/submit-request', {
-      method: 'POST',
-      body: data
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      alert('Demande soumise avec succès !');
-    } else {
-      alert('Erreur : ' + result.error);
-    }
-  } catch (err) {
-    console.error('Erreur lors de la soumission :', err);
-    alert('Une erreur est survenue.');
-  }
-}
 // Charger les demandes
 async function renderSuiviLists() {
   if (!currentUser) {
@@ -854,7 +1090,7 @@ async function renderSuiviLists() {
         submittedRequests = Array.isArray(sampleRequests) ? sampleRequests : [];
       }
     } catch (err) {
-      console.error('Erreur: ', err);
+      console.error('Erreur:', err);
       submittedRequests = Array.isArray(sampleRequests) ? sampleRequests : [];
     }
   }
@@ -864,19 +1100,99 @@ async function renderSuiviLists() {
   const termineesList = document.getElementById('suivi-terminees-list');
   const termineesEmpty = document.getElementById('suivi-terminees-empty');
   
-  const enCours = submittedRequests.filter(r => r.status === 'brouillon' || r.status === 'en_cours');
-  const terminees = submittedRequests.filter(r => r.status === 'traitee' || r.status === 'annulee' || r.status === 'rejetee');
+  const enCours = submittedRequests.filter(r => r.status === 'brouillon' || r.status === 'en_cours' || r.status === 'en_attente_validation' || r.status === 'validee_responsable');
+  const terminees = submittedRequests.filter(r => r.status === 'transmise_budget' || r.status === 'traitee' || r.status === 'annulee' || r.status === 'rejetee');
   
   enCoursList.innerHTML = enCours.map(renderSuiviCard).join('');
   enCoursEmpty.style.display = enCours.length === 0 ? 'block' : 'none';
   
   termineesList.innerHTML = terminees.map(renderSuiviCard).join('');
   termineesEmpty.style.display = terminees.length === 0 ? 'block' : 'none';
+
+  await renderPendingValidations();
+}
+
+async function renderPendingValidations() {
+  const section = document.getElementById('validation-section');
+  const list = document.getElementById('validation-list');
+  const empty = document.getElementById('validation-empty');
+  if (!section || !list || !empty || !currentUser) return;
+
+  try {
+    const response = await fetch('/api/requests/pending-validation');
+    const data = await parseJsonResponse(response);
+    if (!response.ok || !Array.isArray(data.requests)) {
+      section.style.display = 'none';
+      return;
+    }
+
+    section.style.display = 'block';
+    empty.style.display = data.requests.length === 0 ? 'block' : 'none';
+    list.innerHTML = data.requests.map(request => {
+      const isValidated = request.status === 'validee_responsable';
+      return `<div class="suivi-card">
+        <div class="suivi-card-icon">${icon('budget')}</div>
+        <div class="suivi-card-main">
+          <div class="suivi-card-title">${escapeHtml(request.title)}</div>
+          <div class="suivi-card-meta">${escapeHtml(request.reference || '-')} · ${request.created_at ? new Date(request.created_at).toLocaleDateString('fr-FR') : '-'}</div>
+        </div>
+        <div class="suivi-card-right">
+          <span class="suivi-status ${(statusLabels[request.status] || statusLabels.en_cours).cls}">${(statusLabels[request.status] || statusLabels.en_cours).label}</span>
+          ${isValidated
+            ? `<button class="suivi-card-action" onclick="transmitBudgetRequest(${request.id})">Transmettre au service budget</button>`
+            : `<button class="suivi-card-action" onclick="validateExpenseRequest(${request.id})">Valider par signature</button>`}
+        </div>
+      </div>`;
+    }).join('');
+  } catch (err) {
+    console.error('[requests/pending-validation] Erreur:', err);
+    section.style.display = 'none';
+  }
+}
+
+async function validateExpenseRequest(requestId) {
+  if (!window.confirm('Je confirme avoir pris connaissance de cette demande et apposer ma signature électronique simple.')) return;
+
+  try {
+    const response = await fetch(`/api/requests/${requestId}/validate-responsible`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ signatureAccepted: true }),
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || 'La validation est impossible.');
+      return;
+    }
+    alert(data.message || 'Demande validée.');
+    await renderSuiviLists();
+  } catch (err) {
+    console.error('[requests/validate-responsible] Erreur:', err);
+    alert('Erreur lors de la validation.');
+  }
+}
+
+async function transmitBudgetRequest(requestId) {
+  if (!window.confirm('Transmettre cette demande au service budget ?')) return;
+
+  try {
+    const response = await fetch(`/api/requests/${requestId}/transmit-budget`, { method: 'POST' });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || 'La transmission est impossible.');
+      return;
+    }
+    alert(data.message || 'Demande transmise au service budget.');
+    await renderSuiviLists();
+  } catch (err) {
+    console.error('[requests/transmit-budget] Erreur:', err);
+    alert('Erreur lors de la transmission.');
+  }
 }
 
 // Rendre une carte de suivi
 function renderSuiviCard(r) {
-  const st = statusLabels[r.status];
+  const st = statusLabels[r.status] || { label: r.status || 'Inconnu', cls: 'status-brouillon' };
   const isDraft = r.status === 'brouillon';
   return `<div class="suivi-card">
     <div class="suivi-card-icon">${icon(isDraft ? 'filePencil' : 'fileText')}</div>
@@ -886,7 +1202,7 @@ function renderSuiviCard(r) {
     </div>
     <div class="suivi-card-right">
       <span class="suivi-status ${st.cls}">${st.label}</span>
-      ${isDraft ? `<button class="suivi-card-action" onclick="alert('Reprendre le brouillon ${r.ref}')">Reprendre</button>` : `<button class="suivi-card-action" onclick="alert('Détail de la demande ${r.ref}')">Détail</button>`}
+      ${isDraft ? `<button class="suivi-card-action" onclick="alert('Reprendre le brouillon ${r.ref}')">Reprendre</button>` : r.status === 'validee_responsable' ? `<button class="suivi-card-action" onclick="transmitBudgetRequest(${r.id})">Transmettre au service budget</button>` : `<button class="suivi-card-action" onclick="alert('Détail de la demande ${r.ref}')">Détail</button>`}
     </div>
   </div>`;
 }
@@ -923,7 +1239,7 @@ function renderCategories(filterText) {
     html += `<div class="cat-card ${isOpen ? 'open' : ''}" id="cat-${meta.key}">
       <div class="cat-header" onclick="toggleCat('${meta.key}')">
         <div class="cat-header-left">
-          <div class="cat-icon" style="background: ${meta.bg};color: ${meta.fg};">${icon(meta.icon)}</div>
+          <div class="cat-icon" style="background:${meta.bg};color:${meta.fg};">${icon(meta.icon)}</div>
           <div class="cat-name">${cat.title}</div>
         </div>
         <span class="svg-icon chevron">${icon('chevronDown')}</span>
@@ -998,7 +1314,7 @@ function renderSteps() {
     const num = idx + 1;
     const state = num < currentStep ? 'done' : num === currentStep ? 'current' : '';
     const showLine = num < form.steps.length;
-    return `<div class="wz-step ${state}" onclick="goToStep(${num})" style="position: relative;">
+    return `<div class="wz-step ${state}" onclick="goToStep(${num})" style="position:relative;">
       <div class="wz-step-num">${num < currentStep ? icon('check') : num}</div>
       <div class="wz-step-label">${s.label}</div>
       ${showLine ? '<div class="wz-step-line"></div>' : ''}
@@ -1134,7 +1450,7 @@ function renderFieldsHtml(fields, stepIdx) {
     if (f.type === 'textarea') {
       return `<div class="wz-field">
         <label class="wz-field-label">${f.label} ${f.req ? '<span class="req">*</span>' : ''}</label>
-        <textarea class="wz-input" data-step="${stepIdx}" data-field="${fi}" rows="3" style="resize: vertical;"></textarea>
+        <textarea class="wz-input" data-step="${stepIdx}" data-field="${fi}" rows="3" style="resize:vertical;"></textarea>
       </div>`;
     }
     return `<div class="wz-field">
@@ -1266,6 +1582,7 @@ function showLoginViewReal(name) {
 
 function initApp() {
   renderCategories('');
+  bindAdminForm();
   checkAuth();
 
   const bypassBtn = document.getElementById('bypass-auth-btn');

@@ -1,13 +1,18 @@
-CREATE TYPE user_role AS ENUM ('agent', 'validator', 'admin');
-CREATE TYPE request_status AS ENUM ('draft', 'submitted', 'validated', 'rejected', 'cancelled');
+CREATE TYPE user_role AS ENUM ('agent', 'validator', 'admin', 'superAdmin');
+CREATE TYPE request_status AS ENUM (
+    'draft', 'submitted', 'validated', 'rejected', 'cancelled',
+    'brouillon', 'en_cours', 'en_attente_validation', 'validee_responsable',
+    'transmise_budget', 'traitee', 'rejetee', 'annulee'
+);
 
 CREATE TABLE users (
     id SERIAL PRIMARY KEY,
     email VARCHAR(255) UNIQUE NOT NULL,
     first_name VARCHAR(100) NOT NULL,
     last_name VARCHAR(100) NOT NULL,
-    password_hash TEXT NOT NULL,
+    password_hash TEXT NOT NULL DEFAULT '',
     role user_role NOT NULL DEFAULT 'agent',
+    status VARCHAR(20) NOT NULL DEFAULT 'active',
     email_verified BOOLEAN DEFAULT FALSE,
     email_verification_token TEXT,
     email_verification_token_expires_at TIMESTAMP WITH TIME ZONE,
@@ -41,6 +46,9 @@ CREATE TABLE requests (
     id SERIAL PRIMARY KEY,
     user_id INTEGER REFERENCES users(id) ON DELETE CASCADE,
     type_id INTEGER REFERENCES request_types(id) ON DELETE CASCADE,
+    reference VARCHAR(50) UNIQUE NOT NULL,
+    category_key VARCHAR(100) NOT NULL,
+    form_key VARCHAR(100) NOT NULL,
     title VARCHAR(255) NOT NULL,
     data JSONB NOT NULL DEFAULT '{}',
     status request_status NOT NULL DEFAULT 'draft',

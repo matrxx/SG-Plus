@@ -6,36 +6,10 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/requireAuth');
+const { sendExpenseValidationEmail } = require('../utils/mailer');
+const { isAllowedDomain } = require('../utils/emailDomain');
 
 const router = express.Router();
-const { upload } = require('../server'); // Importe la configuration Multer
-
-// Route pour soumettre une demande avec pièces jointes
-router.post('/submit-request', upload.array('files'), (req, res) => {
-  const { formData } = req.body;
-  const files = req.files;
-
-  if (!files || files.length === 0) {
-    return res.status(400).json({ error: 'Aucun fichier téléchargé.' });
-  }
-
-  // Traiter les données du formulaire et les fichiers
-  const requestData = {
-    ...JSON.parse(formData),
-    files: files.map(file => ({
-      filename: file.filename,
-      originalname: file.originalname,
-      path: file.path
-    }))
-  };
-
-  // Ici, tu peux enregistrer requestData en base de données
-  // et envoyer un e-mail avec les pièces jointes
-
-  res.json({ success: true, message: 'Demande soumise avec succès.', requestData });
-});
-
-module.exports = router;
 
 // ---------------------------------------------------------------
 // GET /api/requests — Liste des demandes de l'agent connecté
@@ -85,11 +59,29 @@ router.post(
       const count = parseInt(refResult.rows[0].count, 10) + 1;
       const reference = `${refPrefix}-${year}-${String(count).padStart(4, '0')}`;
 
+      const isExpenseRequest = categoryKey === 'budget' && formKey === 'proposition_depenses';
+      const initialStatus = isExpenseRequest ? 'en_attente_validation' : 'en_cours';
+      const responsibleEmail = isExpenseRequest ? String(data['1-field-5'] || '').trim().toLowerCase() : '';
+      const responsibleLastName = isExpenseRequest ? String(data['1-field-3'] || '').trim() : '';
+      const responsibleFirstName = isExpenseRequest ? String(data['1-field-4'] || '').trim() : '';
+      if (isExpenseRequest && !responsibleEmail) {
+        return res.status(400).json({ error: 'L’adresse e-mail du responsable valideur est requise.' });
+      }
+      if (isExpenseRequest && (!responsibleLastName || !responsibleFirstName)) {
+        return res.status(400).json({ error: 'Le nom et le prénom du responsable valideur sont requis.' });
+      }
+      if (isExpenseRequest && !isAllowedDomain(responsibleEmail)) {
+        return res.status(403).json({ error: 'Le responsable valideur doit avoir une adresse e-mail du domaine autorisé.' });
+      }
       const result = await pool.query(
         `INSERT INTO requests (user_id, reference, category_key, form_key, title, data, status)
-         VALUES ($1, $2, $3, $4, $5, $6, 'en_cours') RETURNING *`,
-        [req.session.userId, reference, categoryKey, formKey, title, data]
+         VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
+        [req.session.userId, reference, categoryKey, formKey, title, data, initialStatus]
       );
+
+      if (isExpenseRequest) {
+        await sendExpenseValidationEmail(responsibleEmail, responsibleFirstName, result.rows[0]);
+      }
 
       return res.status(201).json({ request: result.rows[0] });
     } catch (err) {
@@ -98,6 +90,26 @@ router.post(
     }
   }
 );
+
+// ---------------------------------------------------------------
+// GET /api/requests/pending-validation — Demandes attribuées au responsable
+// ---------------------------------------------------------------
+router.get('/pending-validation', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `SELECT id, reference, title, category_key, form_key, status, data, created_at, updated_at
+       FROM requests
+      WHERE status IN ('en_attente_validation', 'validee_responsable')
+         AND LOWER(COALESCE(data->>'1-field-5', '')) = LOWER($1)
+       ORDER BY created_at DESC`,
+      [req.session.userEmail]
+    );
+    return res.json({ requests: result.rows });
+  } catch (err) {
+    console.error('[requests/pending-validation] Erreur :', err);
+    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
+  }
+});
 
 // ---------------------------------------------------------------
 // GET /api/requests/:id — Détails d'une demande
@@ -109,44 +121,60 @@ router.get('/:id', requireAuth, async (req, res) => {
       [req.params.id, req.session.userId]
     );
 
-    if (result.rows.length === 0) {
-      return res.status(404).json({ error: 'Demande non trouvée.' });
-    }
-
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Demande non trouvée.' });
     return res.json({ request: result.rows[0] });
   } catch (err) {
     console.error('[requests/details] Erreur :', err);
     return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
   }
 });
-const { sendRequestEmail } = require('../utils/mailer');
 
-// Route pour soumettre une demande avec pièces jointes
-router.post('/submit-request', upload.array('files'), async (req, res) => {
-  const { formData, email, firstName } = req.body;
-  const files = req.files;
+// ---------------------------------------------------------------
+// POST /api/requests/:id/validate-responsible — Signature électronique simple
+// ---------------------------------------------------------------
+router.post('/:id/validate-responsible', requireAuth, async (req, res) => {
+  try {
+    if (req.body.signatureAccepted !== true) {
+      return res.status(400).json({ error: 'La confirmation de signature est requise.' });
+    }
 
-  if (!files || files.length === 0) {
-    return res.status(400).json({ error: 'Aucun fichier téléchargé.' });
+    const result = await pool.query(
+      `UPDATE requests
+       SET status = 'validee_responsable', validator_id = $1, validated_at = NOW(), updated_at = NOW()
+       WHERE id = $2 AND status = 'en_attente_validation'
+         AND LOWER(COALESCE(data->>'1-field-5', '')) = LOWER($3)
+       RETURNING *`,
+      [req.session.userId, req.params.id, req.session.userEmail]
+    );
+
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Demande introuvable ou déjà validée.' });
+    return res.json({ message: 'Demande validée par signature électronique simple.', request: result.rows[0] });
+  } catch (err) {
+    console.error('[requests/validate-responsible] Erreur :', err);
+    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
   }
+});
 
-  const requestData = {
-    ...JSON.parse(formData),
-    files: files.map(file => ({
-      filename: file.filename,
-      originalname: file.originalname,
-      path: file.path
-    }))
-  };
+// ---------------------------------------------------------------
+// POST /api/requests/:id/transmit-budget — Transmission au service budget
+// ---------------------------------------------------------------
+router.post('/:id/transmit-budget', requireAuth, async (req, res) => {
+  try {
+    const result = await pool.query(
+      `UPDATE requests
+       SET status = 'transmise_budget', updated_at = NOW()
+       WHERE id = $1 AND status = 'validee_responsable'
+         AND (user_id = $2 OR LOWER(COALESCE(data->>'1-field-5', '')) = LOWER($3))
+       RETURNING *`,
+      [req.params.id, req.session.userId, req.session.userEmail]
+    );
 
-  // Envoyer l'e-mail avec les pièces jointes
-  const emailSent = await sendRequestEmail(email, firstName, requestData, requestData.files);
-
-  if (!emailSent) {
-    return res.status(500).json({ error: 'Échec de l\'envoi de l\'e-mail.' });
+    if (result.rows.length === 0) return res.status(404).json({ error: 'Demande introuvable ou non validée.' });
+    return res.json({ message: 'Demande transmise au service budget.', request: result.rows[0] });
+  } catch (err) {
+    console.error('[requests/transmit-budget] Erreur :', err);
+    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
   }
-
-  res.json({ success: true, message: 'Demande soumise avec succès.' });
 });
 
 // ---------------------------------------------------------------

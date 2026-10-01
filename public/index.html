@@ -138,6 +138,296 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
 .debug-note { margin-top: 18px; padding-top: 14px; border-top: 0.5px dashed var(--border-tertiary); font-size: 11px; color: var(--text-tertiary); line-height: 1.6; }
 .debug-note code { background: var(--bg-secondary); padding: 1px 5px; border-radius: 4px; font-family: monospace; }
 
+/* ===================== PANEL ADMIN ===================== */
+.admin-panel-toggle {
+  margin-left: auto;
+  padding: 8px 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.admin-panel-toggle:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.25);
+}
+.admin-panel {
+  margin-top: 18px;
+  background: #f7f5ff;
+  border: 1px solid var(--border-tertiary);
+  border-radius: 14px;
+  padding: 18px;
+}
+.admin-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.admin-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #26215C;
+}
+.admin-panel-subtitle {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.admin-refresh-btn,
+.admin-save-btn {
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-secondary);
+  padding: 7px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-refresh-btn:hover,
+.admin-save-btn:hover {
+  border-color: #7F77DD;
+  color: #26215C;
+}
+.admin-section-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-tertiary);
+  margin-bottom: 18px;
+}
+.admin-section-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.admin-section-tab.active {
+  border-bottom-color: #534AB7;
+  color: #26215C;
+  font-weight: 600;
+}
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.2fr) minmax(300px, 1.8fr);
+  gap: 18px;
+}
+.admin-card {
+  background: #fff;
+  border: 1px solid var(--border-tertiary);
+  border-radius: 12px;
+  padding: 16px;
+}
+.admin-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #26215C;
+  margin-bottom: 12px;
+}
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.admin-field input,
+.admin-field select {
+  width: 100%;
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+  color: var(--text-primary);
+  background: #fff;
+}
+.admin-field input:focus,
+.admin-field select:focus {
+  outline: none;
+  border-color: #7F77DD;
+}
+.admin-submit-btn {
+  margin-top: 6px;
+  border: none;
+  border-radius: 8px;
+  background: #1D9E75;
+  color: white;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.admin-submit-btn:hover {
+  background: #0F6E56;
+}
+.admin-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow: auto;
+}
+.admin-user-item {
+  border: 1px solid var(--border-tertiary);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+.admin-user-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 10px;
+}
+.admin-user-edit input,
+.admin-user-edit select {
+  min-width: 0;
+  border: 1px solid var(--border-secondary);
+  border-radius: 7px;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-user-edit .admin-save-btn {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+.admin-user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.admin-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.admin-user-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+.admin-user-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-weight: 500;
+}
+.admin-badge.role-agent { background: #eceaf4; color: #5c5775; }
+.admin-badge.role-validator { background: #e6f1fb; color: #185fa5; }
+.admin-badge.role-admin { background: #eaf3de; color: #3b6d11; }
+.admin-badge.status-active { background: #eaf3de; color: #3b6d11; }
+.admin-badge.status-pending { background: #faeeda; color: #854f0b; }
+.admin-badge.status-expired { background: #fcebeb; color: #a32d2d; }
+.admin-delete-btn {
+  border: none;
+  border-radius: 7px;
+  background: #fcebeb;
+  color: #a32d2d;
+  padding: 6px 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-delete-btn:hover {
+  background: #f7d8d8;
+}
+.admin-empty-state {
+  padding: 14px;
+  border: 1px dashed var(--border-secondary);
+  border-radius: 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
+}
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.admin-toolbar select,
+.admin-request-status {
+  border: 1px solid var(--border-secondary);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-primary);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.admin-request-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border-tertiary);
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px;
+}
+.admin-request-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.admin-request-meta {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.admin-request-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+@media (max-width: 760px) {
+  .tabs { flex-wrap: wrap; }
+  .admin-panel-toggle { margin-left: 0; }
+  .admin-grid { grid-template-columns: 1fr; }
+  .admin-panel-header { align-items: flex-start; }
+  .admin-request-item { grid-template-columns: 1fr; }
+  .admin-request-controls { justify-content: flex-start; }
+}
+
 /* ===================== ECRAN ARRIVEE/DEPART (wizard) ===================== */
 .wizard { font-family: var(--font-sans); color: var(--text-primary); }
 .wz-hero { background: #26215C; padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
@@ -232,6 +522,74 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
       <div class="tabs">
         <div class="tab active" id="tab-accueil" >Accueil</div>
         <div class="tab" id="tab-suivi" >Suivre mes demandes</div>
+        <button class="admin-panel-toggle" id="admin-panel-toggle" type="button" style="display:none;" onclick="toggleAdminPanel()">Administration</button>
+      </div>
+    </div>
+
+    <div class="body-area" id="admin-panel" style="display:none;">
+      <div class="admin-panel-header">
+        <div>
+          <div class="admin-panel-title">Administration</div>
+          <div class="admin-panel-subtitle">Gestion des comptes et du traitement des demandes</div>
+        </div>
+        <button class="admin-refresh-btn" type="button" onclick="refreshAdminData()">Actualiser</button>
+      </div>
+      <div class="admin-section-tabs">
+        <button class="admin-section-tab active" id="admin-section-users-tab" type="button" onclick="showAdminSection('users')">Comptes</button>
+        <button class="admin-section-tab" id="admin-section-requests-tab" type="button" onclick="showAdminSection('requests')">Demandes</button>
+      </div>
+      <div class="admin-grid" id="admin-users-section">
+        <div class="admin-card">
+          <div class="admin-card-title">Créer un compte</div>
+          <form id="admin-create-user-form" class="admin-form">
+            <div class="admin-field-row">
+              <div class="admin-field">
+                <label>Prénom</label>
+                <input type="text" id="admin-firstname" placeholder="Prénom" required>
+              </div>
+              <div class="admin-field">
+                <label>Nom</label>
+                <input type="text" id="admin-lastname" placeholder="Nom" required>
+              </div>
+            </div>
+            <div class="admin-field">
+              <label>E-mail</label>
+              <input type="email" id="admin-email" placeholder="prenom.nom@culture.gouv.fr" required>
+            </div>
+            <div class="admin-field">
+              <label>Mot de passe</label>
+              <input type="password" id="admin-password" placeholder="Minimum 8 caractères" required>
+            </div>
+            <div class="admin-field">
+              <label>Rôle</label>
+              <select id="admin-role">
+                <option value="agent">Agent</option>
+                <option value="validator">Valideur</option>
+                <option value="admin">Administrateur</option>
+                <option value="superAdmin">SuperAdmin</option>
+              </select>
+            </div>
+            <button type="submit" class="admin-submit-btn">Créer le compte</button>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-title">Comptes existants</div>
+          <div id="admin-user-list" class="admin-user-list"></div>
+        </div>
+      </div>
+      <div class="admin-requests-section" id="admin-requests-section" style="display:none;">
+        <div class="admin-toolbar">
+          <label for="admin-request-status-filter">Filtrer par statut</label>
+          <select id="admin-request-status-filter" onchange="renderAdminRequests()">
+            <option value="all">Toutes les demandes</option>
+            <option value="en_cours">En cours</option>
+            <option value="traitee">Traitées</option>
+            <option value="rejetee">Rejetées</option>
+            <option value="annulee">Annulées</option>
+          </select>
+        </div>
+        <div id="admin-request-list" class="admin-request-list"></div>
       </div>
     </div>
 
@@ -249,6 +607,14 @@ body { font-family: var(--font-sans); color: var(--text-primary); background: va
     </div>
 
     <div class="body-area" id="suivi-tab-view" style="display:none;">
+      <div class="suivi-section" id="validation-section" style="display:none;">
+        <div class="suivi-section-title">
+          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          Demandes en attente de validation
+        </div>
+        <div id="validation-list"></div>
+        <div class="suivi-empty" id="validation-empty">Aucune demande de dépense ne vous attend.</div>
+      </div>
       <div class="suivi-section">
         <div class="suivi-section-title">
           <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7z"/><path d="M9.5 16.5l1-3 4-4 2 2-4 4z"/></svg></span>

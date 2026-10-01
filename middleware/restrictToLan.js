@@ -37,21 +37,9 @@ function isIpInCidr(ip, cidr) {
 }
 
 function normalizeIp(rawIp) {
-  const value = (rawIp || '').trim();
-  if (!value) return '';
-
   // Les connexions IPv4 sur un serveur Node arrivent parfois préfixées
   // en "::ffff:" (notation IPv4-mapped IPv6) — on la retire pour comparer.
-  return value.startsWith('::ffff:') ? value.slice(7) : value;
-}
-
-function getClientIp(req) {
-  const forwardedFor = req.headers['x-forwarded-for'];
-  if (typeof forwardedFor === 'string' && forwardedFor.trim()) {
-    return normalizeIp(forwardedFor.split(',')[0].trim());
-  }
-
-  return normalizeIp(req.ip || req.socket?.remoteAddress || '');
+  return rawIp.startsWith('::ffff:') ? rawIp.slice(7) : rawIp;
 }
 
 function restrictToLan(req, res, next) {
@@ -64,12 +52,7 @@ function restrictToLan(req, res, next) {
     return next();
   }
 
-  const clientIp = getClientIp(req);
-  if (!clientIp) {
-    console.warn('[restrictToLan] IP client introuvable, accès autorisé par défaut pour éviter un crash serveur.');
-    return next();
-  }
-
+  const clientIp = normalizeIp(req.socket.remoteAddress || '');
   const allowed = ALLOWED_RANGES.some((range) => isIpInCidr(clientIp, range));
 
   if (!allowed) {

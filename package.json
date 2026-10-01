@@ -7,6 +7,8 @@
     "start": "node server.js",
     "dev": "nodemon server.js",
     "migrate": "node db/migrate.js",
+    "upgrade-superadmin": "node db/upgrade-superadmin.js",
+    "upgrade-expense-validation": "node db/upgrade-expense-validation.js",
     "create-admin": "node db/create-admin.js",
     "generate-cert": "bash generate-self-signed-cert.sh"
   },

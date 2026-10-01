@@ -2,10 +2,14 @@
 // Reprend exactement la logique validée ensemble : comparaison stricte
 // sur la partie après le @, insensible à la casse.
 
-const ALLOWED_DOMAINS = (process.env.ALLOWED_EMAIL_DOMAIN || 'culture.gouv.fr')
-  .split(',')
-  .map((d) => d.trim().toLowerCase())
-  .filter(Boolean);
+const DEFAULT_ALLOWED_DOMAIN = 'culture.gouv.fr';
+const ALLOWED_DOMAINS = Array.from(new Set([
+  DEFAULT_ALLOWED_DOMAIN,
+  ...(process.env.ALLOWED_EMAIL_DOMAIN || '')
+    .split(',')
+    .map((d) => d.trim().toLowerCase().replace(/^@/, '').replace(/\.$/, ''))
+    .filter(Boolean),
+]));
 
 function isAllowedDomain(email) {
   if (process.env.ALLOWED_EMAIL_DOMAIN === undefined) {
@@ -15,7 +19,11 @@ function isAllowedDomain(email) {
     );
   }
 
-  const domain = email.split('@')[1];
+  const normalizedEmail = String(email || '').trim().toLowerCase();
+  const atIndex = normalizedEmail.lastIndexOf('@');
+  if (atIndex <= 0) return false;
+
+  const domain = normalizedEmail.slice(atIndex + 1).replace(/\.$/, '');
   if (!domain) return false;
 
   return ALLOWED_DOMAINS.includes(domain.toLowerCase());

@@ -8,7 +8,8 @@
 
 ### Fonctionnalités clés
 - ✅ **Authentification sécurisée** : Inscription avec vérification par e-mail, connexion par mot de passe (haché en Argon2id)
-- ✅ **Gestion des rôles** : Agents, Valideurs, Administrateurs
+- ✅ **Gestion des rôles** : Agents, Valideurs, Administrateurs et SuperAdmin
+- ✅ **Interface SuperAdmin** : Gestion des comptes et suivi des demandes depuis un onglet dédié
 - ✅ **Formulaires personnalisables** : Catégories et types de demandes configurables
 - ✅ **Restriction réseau** : Accès limité au réseau interne de l'organisation
 - ✅ **Suivi des demandes** : Historique des statuts et notifications
@@ -47,12 +48,14 @@ nano .env  # ou utilisez votre éditeur préféré
 |----------|-------------|---------|
 | `DATABASE_URL` | URL de connexion PostgreSQL | `postgresql://user:password@localhost:5432/nestor_c2` |
 | `SESSION_SECRET` | Clé secrète pour les sessions | `votre_clé_sécrète_ici` |
-| `ALLOWED_EMAIL_DOMAIN` | Domaine e-mail autorisé (séparés par des virgules) | `mon-entreprise.com` |
+| `ALLOWED_EMAIL_DOMAIN` | Domaine e-mail autorisé (séparés par des virgules) | `culture.gouv.fr` |
+| `AUTH_MODE` | Mode d’authentification : `local`, `exchange` | `exchange` |
+| `EXCHANGE_AUTH_URL` | Endpoint de validation Exchange | `https://exchange.example.local/auth` |
 | `ALLOWED_IP_RANGES` | Plages IP autorisées (format CIDR) | `10.0.0.0/8,192.168.0.0/16` |
-| `PUBLIC_BASE_URL` | URL publique du portail | `https://portail.mon-entreprise.com` |
-| `SMTP_HOST` | Hôte SMTP | `smtp.mon-entreprise.com` |
+| `PUBLIC_BASE_URL` | URL publique du portail | `https://portail.culture.gouv.fr` |
+| `SMTP_HOST` | Hôte SMTP | `smtp.culture.gouv.fr` |
 | `SMTP_PORT` | Port SMTP | `587` |
-| `SMTP_USER` | Utilisateur SMTP | `portail@mon-entreprise.com` |
+| `SMTP_USER` | Utilisateur SMTP | `portail@culture.gouv.fr` |
 | `SMTP_PASSWORD` | Mot de passe SMTP | `votre_mot_de_passe` |
 | `SMTP_SECURE` | Utiliser TLS (true/false) | `false` |
 | `USE_HTTPS` | Activer HTTPS (true/false) | `true` |
@@ -66,13 +69,39 @@ nano .env  # ou utilisez votre éditeur préféré
 npm run migrate
 ```
 
-### 5. Créer le premier compte administrateur
+### 5. Ajouter le rôle SuperAdmin sur une base existante
+Si la base a déjà été initialisée avant l'ajout du rôle `superAdmin` :
 ```bash
-npm run create-admin prenom.nom@mon-entreprise.com "Prénom" "Nom"
+npm run upgrade-superadmin
 ```
-> ⚠️ **Important** : Ce script vous demandera de saisir un mot de passe de manière interactive.
 
-### 6. Générer un certificat TLS (optionnel, pour HTTPS)
+Pour activer les statuts du circuit de validation des propositions de dépenses sur une base existante :
+```bash
+npm run upgrade-expense-validation
+```
+
+### 6. Créer le premier compte SuperAdmin
+```bash
+npm run create-admin prenom.nom@culture.gouv.fr "Prénom" "Nom"
+```
+> Le script demande le mot de passe de manière interactive s'il n'est pas fourni via `SUPERADMIN_PASSWORD` ou en argument. Il doit contenir au moins 12 caractères.
+
+Le compte `superAdmin` voit l'onglet **Administration**, absent pour les autres rôles. Il permet de créer, modifier et supprimer les comptes expirés, ainsi que de filtrer les demandes et d'en modifier le statut.
+
+### 7. Mode authentification Exchange (préparé)
+Le backend supporte maintenant un mode Exchange dédié, sans casser la version actuelle :
+
+```env
+AUTH_MODE=exchange
+EXCHANGE_AUTH_URL=https://exchange.example.local/auth
+ALLOWED_EMAIL_DOMAIN=culture.gouv.fr
+```
+
+Dans ce mode, la route `/api/auth/login` appelle le connecteur Exchange avec les identifiants fournis. Si le connecteur n’est pas configuré, le projet reste compatible en mode local / bypass de secours.
+
+> Le bypass `/api/auth/bypass` est conservé tant que le connecteur Exchange n’est pas branché, pour éviter de bloquer le front en phase de test et de recette.
+
+### 8. Générer un certificat TLS (optionnel, pour HTTPS)
 ```bash
 bash generate-self-signed-cert.sh
 ```
@@ -104,6 +133,8 @@ Nestor-C2/
 │   ├── schema.sql          # Schéma PostgreSQL
 │   ├── pool.js             # Connexion à la base de données
 │   ├── migrate.js          # Script de migration
+│   ├── upgrade-superadmin.js # Ajout du rôle superAdmin sur une base existante
+│   ├── upgrade-expense-validation.js # Ajout des statuts de validation des dépenses
 │   └── create-admin.js     # Script de création de l'admin
 ├── middleware/
 │   ├── requireAuth.js      # Vérifie la session utilisateur
@@ -157,31 +188,40 @@ Nestor-C2/
 |---------|----------|-------------|
 | POST | `/api/auth/signup` | Inscription (auto-vérification par e-mail) |
 | GET | `/api/auth/verify-email?token=...` | Vérifier l'e-mail |
-| POST | `/api/auth/login` | Connexion |
+| POST | `/api/auth/login` | Connexion locale ou Exchange selon `AUTH_MODE` |
 | POST | `/api/auth/logout` | Déconnexion |
 | POST | `/api/auth/forgot-password` | Demander une réinitialisation |
 | POST | `/api/auth/reset-password` | Réinitialiser le mot de passe |
 | POST | `/api/auth/setup-password` | Configurer le mot de passe (valideurs) |
 | GET | `/api/auth/me` | Vérifier la session active |
+| POST | `/api/auth/bypass` | Bypass de secours conservé pendant la transition |
 
 ### Demandes
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
 | GET | `/api/requests` | Lister mes demandes |
 | POST | `/api/requests` | Créer une demande |
+| GET | `/api/requests/pending-validation` | Lister les dépenses à valider par le responsable connecté |
+| POST | `/api/requests/:id/validate-responsible` | Valider une dépense par signature électronique simple |
+| POST | `/api/requests/:id/transmit-budget` | Transmettre une dépense validée au service budget |
 | GET | `/api/requests/:id` | Détails d'une demande |
 | PUT | `/api/requests/:id` | Mettre à jour une demande |
 | DELETE | `/api/requests/:id` | Supprimer une demande (brouillon uniquement) |
 
-### Administration (Admin uniquement)
+### Administration (SuperAdmin uniquement)
 | Méthode | Endpoint | Description |
 |---------|----------|-------------|
+| GET | `/api/admin/users` | Lister les comptes |
+| POST | `/api/admin/users` | Créer un compte |
+| PUT | `/api/admin/users/:id` | Modifier un compte |
+| DELETE | `/api/admin/users/:id` | Supprimer un compte expiré |
 | GET | `/api/admin/validators` | Lister les valideurs |
 | POST | `/api/admin/validators` | Créer un valideur |
 | GET | `/api/admin/validators/:userId/categories` | Lister les catégories d'un valideur |
 | POST | `/api/admin/validators/:userId/categories` | Associer une catégorie |
 | DELETE | `/api/admin/validators/:userId/categories/:categoryKey` | Retirer une catégorie |
 | GET | `/api/admin/requests` | Lister toutes les demandes |
+| PATCH | `/api/admin/requests/:id` | Modifier le statut d'une demande |
 
 ---
 

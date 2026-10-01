@@ -1,18 +1,20 @@
 // Script à exécuter une seule fois en ligne de commande sur le serveur,
-// pour créer le tout premier compte administrateur. Volontairement un
-// script CLI plutôt qu'une route API : exposer un endpoint HTTP capable de
-// créer un compte admin, même temporairement ou avec un "secret" codé en
-// dur, serait une faille de sécurité — alors qu'un script lancé directement
-// sur le serveur suppose déjà un accès de confiance (SSH, console).
+// pour créer le premier compte superAdmin de l'application.
 //
 // Usage :
-//   node src/db/create-admin.js prenom.nom@mon-domaine.com "Prénom" "Nom"
-// Le mot de passe est demandé de façon interactive (jamais en argument de
-// commande, pour éviter qu'il se retrouve dans l'historique du shell).
+//   node db/create-admin.js
+//
+// Avec les arguments optionnels :
+//   node db/create-admin.js s.dellupo@culture.gouv.fr "Sébastien" "Dellupo" "mot-de-passe"
 
 const readline = require('readline');
 const argon2 = require('argon2');
 const { query } = require('./pool');
+
+const DEFAULT_EMAIL = 's.dellupo@culture.gouv.fr';
+const DEFAULT_FIRST_NAME = 'Sébastien';
+const DEFAULT_LAST_NAME = 'Dellupo';
+const DEFAULT_PASSWORD = process.env.SUPERADMIN_PASSWORD;
 
 const rl = readline.createInterface({
   input: process.stdin,
@@ -25,38 +27,66 @@ function ask(question) {
   });
 }
 
+async function ensureSuperAdminRole() {
+  const roleType = await query(`
+    SELECT 1
+    FROM pg_type
+    WHERE typname = 'user_role'
+  `);
+
+  if (roleType.rows.length === 0) {
+    throw new Error('Le type PostgreSQL user_role est introuvable. Exécutez la migration initiale.');
+  }
+
+  const roleValue = await query(`
+    SELECT 1
+    FROM pg_enum
+    WHERE enumtypid = 'user_role'::regtype AND enumlabel = 'superAdmin'
+  `);
+
+  if (roleValue.rows.length === 0) {
+    await query("ALTER TYPE user_role ADD VALUE 'superAdmin'");
+  }
+}
+
 async function createAdmin() {
   console.log('\n=== Création du compte administrateur ===\n');
 
   try {
-    const email = await ask('E-mail: ');
-    const firstName = await ask('Prénom: ');
-    const lastName = await ask('Nom: ');
-    const password = await ask('Mot de passe: ');
-    const confirmPassword = await ask('Confirmer le mot de passe: ');
+    const email = process.argv[2] || DEFAULT_EMAIL;
+    const firstName = process.argv[3] || DEFAULT_FIRST_NAME;
+    const lastName = process.argv[4] || DEFAULT_LAST_NAME;
+    const password = process.argv[5] || DEFAULT_PASSWORD || await ask('Mot de passe du superAdmin : ');
+    if (!password || password.length < 12) {
+      throw new Error('Le mot de passe du superAdmin doit contenir au moins 12 caractères.');
+    }
 
-    if (password !== confirmPassword) {
-      console.error('\n[ERREUR] Les mots de passe ne correspondent pas.');
+    await ensureSuperAdminRole();
+
+    const existing = await query('SELECT id FROM users WHERE email = $1', [email]);
+    if (existing.rows.length > 0) {
+      console.warn('\n[WARN] Un compte avec cette adresse existe déjà.');
       rl.close();
-      process.exit(1);
+      process.exit(0);
     }
 
     const passwordHash = await argon2.hash(password, {
       type: argon2.argon2id,
       memoryCost: 65536,
       timeCost: 3,
-      parallelism: 1
+      parallelism: 1,
     });
 
     await query(
-      `INSERT INTO users (email, first_name, last_name, password_hash, role, email_verified)
-       VALUES ($1, $2, $3, $4, 'admin', TRUE)`,
+      `INSERT INTO users (email, first_name, last_name, password_hash, role, status)
+       VALUES ($1, $2, $3, $4, 'superAdmin', 'active')`,
       [email, firstName, lastName, passwordHash]
     );
 
-    console.log('\n[SUCCESS] Compte administrateur créé !');
+    console.log('\n[SUCCESS] Compte superAdmin créé !');
     console.log(`E-mail: ${email}`);
     console.log(`Nom: ${firstName} ${lastName}`);
+    console.log('\n➡️  Conservez ce mot de passe dans un gestionnaire de secrets.');
 
     rl.close();
     process.exit(0);
