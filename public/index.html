@@ -1,0 +1,377 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<meta name="theme-color" content="#AA202D"/>
+<title>Services internes — C2RMF</title>
+<link rel="icon" type="image/png" href="/favicon.png">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png">
+<link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+<a class="skip-link" href="#main">Aller au contenu</a>
+
+<!-- ===================== EN-TÊTE (utilisateur connecté) ===================== -->
+<header class="app-header" id="app-header" style="display:none;">
+  <div class="app-header-inner">
+    <div class="brand">
+      <img class="brand-logo" src="/logo-96.png" width="44" height="44" alt="">
+      <div class="brand-text">
+        <span class="brand-name">C2RMF</span>
+        <span class="brand-org">Centre de recherche et de restauration des musées de France</span>
+      </div>
+    </div>
+    <div class="user-menu">
+      <div class="user-info">
+        <span class="user-name" id="user-name"></span>
+        <span class="user-role" id="user-role"></span>
+      </div>
+      <button type="button" class="btn-quiet" data-onclick="logout()">Se déconnecter</button>
+    </div>
+  </div>
+  <nav class="nav-tabs" aria-label="Navigation principale">
+    <div class="nav-tabs-inner">
+      <button type="button" class="nav-tab active" id="tab-accueil" data-onclick="showAccueilTab('accueil')">Accueil</button>
+      <button type="button" class="nav-tab" id="tab-suivi" data-onclick="showAccueilTab('suivi')">Suivre mes demandes</button>
+      <button type="button" class="nav-tab" id="admin-panel-toggle" style="display:none;" data-onclick="showAccueilTab('admin')">Administration</button>
+    </div>
+  </nav>
+</header>
+
+<noscript>
+  <div class="page"><p class="wz-error">JavaScript est nécessaire pour utiliser cette application.</p></div>
+</noscript>
+
+<main id="main" tabindex="-1">
+
+<!-- ===================== ECRAN ACCUEIL ===================== -->
+<div class="screen" id="screen-accueil">
+  <div class="page">
+
+    <!-- Onglet : Accueil -->
+    <div id="accueil-tab-view">
+      <div class="page-head">
+        <h1 class="page-title">Services internes</h1>
+        <p class="page-sub">La plateforme de services pour les agents</p>
+      </div>
+
+      <div class="search-box" role="search">
+        <label class="search-label" for="search-input">Rechercher un formulaire par mot clé</label>
+        <div class="search-row">
+          <div class="search-field">
+            <span class="svg-icon search-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-3.5-3.5"/></svg></span>
+            <input class="search-input" type="text" id="search-input" autocomplete="off" placeholder="Exemple : badge, mobilier, reliure, véhicule..." data-oninput="filterCategories()" data-onenter="filterCategoriesReal()"/>
+          </div>
+          <button type="button" class="search-btn" data-onclick="filterCategoriesReal()">Rechercher</button>
+        </div>
+      </div>
+
+      <h2 class="section-title">Tous les formulaires par catégorie</h2>
+      <div class="cat-grid" id="cat-grid"></div>
+      <div class="no-results" id="no-results">Aucun formulaire ne correspond à votre recherche.</div>
+    </div>
+
+    <!-- Onglet : Suivre mes demandes -->
+    <div id="suivi-tab-view" style="display:none;">
+      <div class="page-head">
+        <h1 class="page-title">Suivre mes demandes</h1>
+        <p class="page-sub">Retrouvez l'état de vos demandes et celles qui attendent votre validation</p>
+      </div>
+      <div class="suivi-section" id="validation-section" style="display:none;">
+        <h2 class="suivi-section-title">
+          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          Demandes en attente de validation
+        </h2>
+        <div id="validation-list"></div>
+        <div class="suivi-empty" id="validation-empty">Aucune demande de dépense ne vous attend.</div>
+      </div>
+      <div class="suivi-section">
+        <h2 class="suivi-section-title">
+          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7z"/><path d="M9.5 16.5l1-3 4-4 2 2-4 4z"/></svg></span>
+          Vos brouillons et demandes en cours de traitement
+        </h2>
+        <div id="suivi-en-cours-list"></div>
+        <div class="suivi-empty" id="suivi-en-cours-empty">Aucune demande en cours pour le moment. Les demandes que vous envoyez depuis l'Accueil apparaîtront ici.</div>
+      </div>
+      <div class="suivi-section">
+        <h2 class="suivi-section-title">
+          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8"/><path d="M10 13h4"/></svg></span>
+          Vos demandes traitées / annulées / rejetées
+        </h2>
+        <div id="suivi-terminees-list"></div>
+        <div class="suivi-empty" id="suivi-terminees-empty">Aucune demande traitée, annulée ou rejetée pour le moment.</div>
+      </div>
+    </div>
+
+    <!-- Onglet : Administration (superAdmin) -->
+    <div id="admin-panel" style="display:none;">
+      <div class="admin-panel-header">
+        <div>
+          <h1 class="admin-panel-title">Administration</h1>
+          <p class="admin-panel-subtitle">Gestion des comptes et du traitement des demandes</p>
+        </div>
+        <button class="admin-refresh-btn" type="button" data-onclick="refreshAdminData()">Actualiser</button>
+      </div>
+      <div class="admin-section-tabs">
+        <button class="admin-section-tab active" id="admin-section-users-tab" type="button" data-onclick="showAdminSection('users')">Comptes</button>
+        <button class="admin-section-tab" id="admin-section-requests-tab" type="button" data-onclick="showAdminSection('requests')">Demandes</button>
+      </div>
+      <div class="admin-grid" id="admin-users-section">
+        <div class="admin-card">
+          <h2 class="admin-card-title">Créer un compte</h2>
+          <form id="admin-create-user-form" class="admin-form">
+            <div class="admin-field-row">
+              <div class="admin-field">
+                <label for="admin-firstname">Prénom</label>
+                <input type="text" id="admin-firstname" placeholder="Prénom" required>
+              </div>
+              <div class="admin-field">
+                <label for="admin-lastname">Nom</label>
+                <input type="text" id="admin-lastname" placeholder="Nom" required>
+              </div>
+            </div>
+            <div class="admin-field">
+              <label for="admin-email">E-mail</label>
+              <input type="email" id="admin-email" placeholder="prenom.nom@culture.gouv.fr" required>
+            </div>
+            <div class="admin-field">
+              <label for="admin-password">Mot de passe</label>
+              <input type="password" id="admin-password" placeholder="Minimum 8 caractères" required>
+            </div>
+            <div class="admin-field">
+              <label for="admin-role">Rôle</label>
+              <select id="admin-role">
+                <option value="agent">Agent</option>
+                <option value="validator">Valideur</option>
+                <option value="admin">Administrateur</option>
+                <option value="superAdmin">SuperAdmin</option>
+              </select>
+            </div>
+            <button type="submit" class="admin-submit-btn">Créer le compte</button>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <h2 class="admin-card-title">Comptes existants</h2>
+          <div id="admin-user-list" class="admin-user-list"></div>
+        </div>
+      </div>
+      <div class="admin-requests-section" id="admin-requests-section" style="display:none;">
+        <div class="admin-toolbar">
+          <label for="admin-request-status-filter">Filtrer par statut</label>
+          <select id="admin-request-status-filter" data-onchange="renderAdminRequests()">
+            <option value="all">Toutes les demandes</option>
+            <option value="en_cours">En cours</option>
+            <option value="traitee">Traitées</option>
+            <option value="rejetee">Rejetées</option>
+            <option value="annulee">Annulées</option>
+          </select>
+        </div>
+        <div id="admin-request-list" class="admin-request-list"></div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== ECRAN CONNEXION ===================== -->
+<div class="screen" id="screen-connexion">
+  <div class="auth">
+    <aside class="auth-aside">
+      <img class="auth-logo" src="/logo-192.png" width="88" height="88" alt="C2RMF">
+      <h1 class="auth-title">Services internes</h1>
+      <p class="auth-lead">La plateforme de services pour les agents</p>
+      <p class="auth-org">Centre de recherche et de restauration des musées de France</p>
+    </aside>
+
+    <div class="auth-main">
+      <div class="login-card">
+
+        <div class="login-view active" id="view-login">
+          <h2 class="login-card-title">Connexion</h2>
+          <p class="login-card-sub">Connectez-vous avec votre compte agent</p>
+          <div class="field">
+            <label class="field-label" for="login-email">Adresse e-mail professionnelle</label>
+            <div class="field-input-wrap">
+              <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
+              <input class="field-input" type="email" id="login-email" autocomplete="username" placeholder="prenom.nom@culture.gouv.fr" data-onenter="trySubmitLogin()"/>
+            </div>
+            <div class="field-error" id="err-login-email" role="alert">Veuillez saisir une adresse e-mail valide.</div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="login-pass">Mot de passe</label>
+            <div class="field-input-wrap">
+              <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+              <input class="field-input" type="password" id="login-pass" autocomplete="current-password" placeholder="Votre mot de passe" data-onenter="trySubmitLogin()"/>
+            </div>
+            <div class="field-error" id="err-login-pass" role="alert">Veuillez saisir votre mot de passe.</div>
+          </div>
+          <button type="button" class="login-btn" data-onclick="trySubmitLogin()">Se connecter</button>
+          <div class="login-links">
+            <button type="button" class="link-btn" data-onclick="showLoginViewReal('forgot')">Mot de passe oublié ?</button>
+            <button type="button" class="link-btn" data-onclick="showLoginViewReal('signup')">Créer un compte</button>
+          </div>
+        </div>
+
+        <div class="login-view" id="view-forgot">
+          <button type="button" class="back-link link-btn" data-onclick="showLoginViewReal('login')"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour à la connexion</button>
+          <h2 class="login-card-title">Mot de passe oublié</h2>
+          <p class="login-card-sub">Recevez un lien de réinitialisation par e-mail</p>
+          <div class="field">
+            <label class="field-label" for="forgot-email">Adresse e-mail professionnelle</label>
+            <div class="field-input-wrap">
+              <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
+              <input class="field-input" type="email" id="forgot-email" autocomplete="email" placeholder="prenom.nom@culture.gouv.fr" data-onenter="trySubmitForgot()"/>
+            </div>
+            <div class="field-error" id="err-forgot-email" role="alert">Veuillez saisir une adresse e-mail valide.</div>
+          </div>
+          <button type="button" class="login-btn" data-onclick="trySubmitForgot()">Envoyer le lien de réinitialisation</button>
+        </div>
+
+        <div class="login-view" id="view-forgot-success">
+          <div class="success-box">
+            <div class="success-icon"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <h2 class="success-title">E-mail envoyé</h2>
+            <p class="success-text">Si cette adresse correspond à un compte existant, un lien de réinitialisation a été envoyé.</p>
+            <button type="button" class="login-btn auto" data-onclick="showLoginViewReal('login')">Retour à la connexion</button>
+          </div>
+        </div>
+
+        <div class="login-view" id="view-signup">
+          <button type="button" class="back-link link-btn" data-onclick="showLoginViewReal('login')"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour à la connexion</button>
+          <h2 class="login-card-title">Créer un compte</h2>
+          <p class="login-card-sub">Inscription réservée aux agents culture.gouv.fr</p>
+          <div class="field-row">
+            <div class="field">
+              <label class="field-label" for="su-firstname">Prénom</label>
+              <input class="field-input no-icon" type="text" id="su-firstname" autocomplete="given-name" placeholder="Camille"/>
+            </div>
+            <div class="field">
+              <label class="field-label" for="su-lastname">Nom</label>
+              <input class="field-input no-icon" type="text" id="su-lastname" autocomplete="family-name" placeholder="Renard"/>
+            </div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="su-email">Adresse e-mail professionnelle</label>
+            <div class="field-input-wrap">
+              <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
+              <input class="field-input" type="email" id="su-email" autocomplete="email" placeholder="prenom.nom@culture.gouv.fr" data-oninput="checkDomain()"/>
+            </div>
+            <div id="domain-feedback" aria-live="polite"></div>
+            <div class="field-error" id="err-su-email" role="alert">Veuillez saisir une adresse e-mail valide.</div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="su-pass">Mot de passe</label>
+            <div class="field-input-wrap">
+              <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+              <input class="field-input" type="password" id="su-pass" autocomplete="new-password" placeholder="8 caractères minimum" data-oninput="checkStrength()"/>
+            </div>
+            <div class="strength-bar" aria-hidden="true">
+              <div class="strength-seg" id="seg-1"></div>
+              <div class="strength-seg" id="seg-2"></div>
+              <div class="strength-seg" id="seg-3"></div>
+            </div>
+            <div class="field-error" id="err-su-pass" role="alert">Le mot de passe doit contenir au moins 8 caractères.</div>
+          </div>
+          <div class="field">
+            <label class="field-label" for="su-pass2">Confirmer le mot de passe</label>
+            <div class="field-input-wrap">
+              <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+              <input class="field-input" type="password" id="su-pass2" autocomplete="new-password" placeholder="Saisissez-le à nouveau" data-onenter="trySubmitSignup()"/>
+            </div>
+            <div class="field-error" id="err-su-pass2" role="alert">Les mots de passe ne correspondent pas.</div>
+          </div>
+          <button type="button" class="login-btn" data-onclick="trySubmitSignup()">Créer mon compte</button>
+        </div>
+
+        <div class="login-view" id="view-verify">
+          <div class="success-box">
+            <div class="success-icon pending"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-5 9 5v9H3z"/><path d="M3 9l9 5 9-5"/></svg></span></div>
+            <h2 class="success-title">Vérifiez votre boîte mail</h2>
+            <p class="success-text">Si les conditions sont remplies, un e-mail de vérification a été envoyé à l'adresse fournie. Cliquez sur le lien qu'il contient pour activer votre compte.</p>
+            <div class="simulate-row">
+              <button type="button" class="btn-secondary" data-onclick="showLoginViewReal('signup')">Modifier l'e-mail</button>
+            </div>
+          </div>
+        </div>
+
+        <div class="login-view" id="view-activated">
+          <div class="success-box">
+            <div class="success-icon"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span></div>
+            <h2 class="success-title">Compte activé</h2>
+            <p class="success-text">Votre adresse e-mail a été vérifiée et votre compte est désormais actif. Vous pouvez vous connecter.</p>
+            <button type="button" class="login-btn auto" data-onclick="showLoginViewReal('login')">Aller à la connexion</button>
+          </div>
+        </div>
+
+        <div class="login-view" id="view-domain-rejected">
+          <div class="success-box">
+            <div class="success-icon danger"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+            <h2 class="success-title">Domaine non autorisé</h2>
+            <p class="success-text">Seules les adresses e-mail du domaine <strong>culture.gouv.fr</strong> peuvent créer un compte sur cette plateforme.</p>
+            <button type="button" class="login-btn auto" data-onclick="showLoginViewReal('signup')">Retour à l'inscription</button>
+          </div>
+        </div>
+
+      </div>
+      <p class="auth-footnote">Accès réservé aux agents culture.gouv.fr. En cas de difficulté, contactez le support informatique.</p>
+    </div>
+  </div>
+</div>
+
+<!-- ===================== ECRAN CATEGORIE / FORMULAIRE ===================== -->
+<div class="screen" id="screen-categorie">
+  <div class="page">
+    <div class="page-head">
+      <button type="button" class="back-btn" id="hero-back" style="display:none;" data-onclick="heroBack()"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span><span id="hero-back-label">Retour aux formulaires</span></button>
+      <h1 class="page-title" id="hero-title">Catégorie</h1>
+      <p class="page-sub" id="hero-sub">Choisissez le formulaire correspondant à votre demande</p>
+    </div>
+
+    <div id="menu-view">
+      <h2 class="section-title">Formulaires disponibles</h2>
+      <div class="form-menu-grid" id="form-menu-grid"></div>
+    </div>
+
+    <div id="wizard-view" style="display:none;">
+      <div id="wz-notice" class="wz-notice" role="note" style="display:none;"></div>
+      <div class="wz-layout">
+        <div class="wz-steps" id="wz-steps"></div>
+        <div class="wz-panel">
+          <div class="wz-main" id="wz-main"></div>
+          <div class="wz-footer" id="wz-footer">
+            <button type="button" class="wz-btn-ghost" id="btn-prev" data-onclick="prevStep()">← Précédent</button>
+            <span class="wz-progress-text" id="wz-progress" aria-live="polite"></span>
+            <button type="button" class="wz-btn-primary" id="btn-next" data-onclick="nextStep()">Suivant →</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+</main>
+
+<!-- ===================== DETAIL D'UNE DEMANDE ===================== -->
+<dialog class="detail-dialog" id="detail-dialog" aria-labelledby="detail-title">
+  <div class="detail-head">
+    <div>
+      <h2 class="detail-title" id="detail-title"></h2>
+      <p class="detail-meta" id="detail-meta"></p>
+    </div>
+    <button type="button" class="detail-close" aria-label="Fermer" data-onclick="closeRequestDetail()">✕</button>
+  </div>
+  <div class="detail-body" id="detail-body"></div>
+</dialog>
+
+<footer class="app-footer">
+  <span>Nestor-C2 — Services internes du C2RMF</span>
+  <span id="build-info"></span>
+</footer>
+
+<script src="forms-data.js"></script>
+<script src="ui-events.js"></script>
+<script src="app.js"></script>
+</body>
+</html>

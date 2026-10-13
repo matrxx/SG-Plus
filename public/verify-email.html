@@ -1,0 +1,44 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta name="theme-color" content="#AA202D" />
+  <title>Vérifier l'e-mail — Services internes C2RMF</title>
+  <link rel="icon" type="image/png" href="/favicon.png">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <link rel="stylesheet" href="/styles.css">
+</head>
+<body>
+  <div class="simple-page">
+    <header class="simple-header">
+      <div class="simple-header-inner">
+        <div class="brand">
+          <img class="brand-logo" src="/logo-96.png" width="44" height="44" alt="">
+          <div class="brand-text">
+            <span class="brand-name">C2RMF</span>
+            <span class="brand-org">Services internes</span>
+          </div>
+        </div>
+      </div>
+    </header>
+    <main class="simple-wrap">
+      <div class="simple-card">
+        <h1 class="card-title" id="card-title">Vérification en cours</h1>
+        <p class="card-sub" id="card-sub">Veuillez patienter pendant que nous vérifions votre adresse e-mail.</p>
+        <div id="message" class="alert" role="alert" style="display: none;"></div>
+        <div id="loading" class="loading-block">
+          <div class="spinner"></div>
+          <p>Vérification...</p>
+        </div>
+        <div class="center-row">
+          <a href="/" class="link">Retour à l'accueil</a>
+        </div>
+      </div>
+    </main>
+    <footer class="app-footer"><span>Nestor-C2 — Services internes du C2RMF</span></footer>
+  </div>
+
+  <script src="verify-email.js"></script>
+</body>
+</html>
