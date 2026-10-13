@@ -1,0 +1,824 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>Portail Services Internes — Démo</title>
+<style>
+:root {
+  --bg-primary: #ffffff;
+  --bg-secondary: #F4F3F8;
+  --bg-tertiary: #ECEAF4;
+  --border-tertiary: #E3E1EE;
+  --border-secondary: #CFCBE2;
+  --text-primary: #1F1B3D;
+  --text-secondary: #5C5775;
+  --text-tertiary: #918CA8;
+  --radius-md: 8px;
+  --radius-lg: 14px;
+  --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+}
+* { box-sizing: border-box; margin: 0; padding: 0; }
+.svg-icon { display: inline-flex; align-items: center; justify-content: center; width: 1em; height: 1em; line-height: 0; }
+.svg-icon svg { width: 100%; height: 100%; display: block; }
+body { font-family: var(--font-sans); color: var(--text-primary); background: var(--bg-secondary); }
+
+/* ===== Barre de démo (navigation entre écrans du prototype) ===== */
+.demo-bar {
+  background: #111; color: #fff; padding: 10px 20px; display: flex; gap: 10px;
+  align-items: center; font-size: 13px; position: sticky; top: 0; z-index: 999;
+}
+.demo-bar span { opacity: 0.6; margin-right: 6px; }
+.demo-btn {
+  background: rgba(255,255,255,0.1); color: #fff; border: none; border-radius: 6px;
+  padding: 6px 12px; font-size: 12.5px; cursor: pointer; font-family: inherit;
+}
+.demo-btn:hover { background: rgba(255,255,255,0.2); }
+.demo-btn.active { background: #1D9E75; }
+
+.screen { display: none; }
+.screen.active { display: block; }
+
+/* ===================== ECRAN ACCUEIL ===================== */
+.portal { font-family: var(--font-sans); color: var(--text-primary); }
+.hero { background: #26215C; padding: 28px 32px 0; }
+.hero-title { font-size: 26px; font-weight: 500; color: white; margin-bottom: 4px; }
+.hero-sub { font-size: 13px; color: #CECBF6; margin-bottom: 18px; }
+.tabs { display: flex; gap: 2px; }
+.tab { padding: 10px 18px; font-size: 13px; cursor: pointer; border-radius: 8px 8px 0 0; color: #CECBF6; background: transparent; transition: all 0.12s; }
+.tab.active { background: var(--bg-primary); color: #26215C; font-weight: 500; }
+.tab:hover:not(.active) { background: rgba(255,255,255,0.08); color: white; }
+.body-area { background: var(--bg-primary); padding: 24px 32px 32px; }
+.search-box { background: #EEEDFE; border-radius: var(--radius-lg); overflow: hidden; margin-bottom: 24px; }
+.search-label { font-size: 12px; font-weight: 500; color: #3C3489; letter-spacing: 0.04em; padding: 10px 18px; text-transform: uppercase; }
+.search-row { display: flex; gap: 10px; padding: 0 18px 18px; }
+.search-input { flex: 1; padding: 9px 14px; border: 0.5px solid var(--border-secondary); border-radius: var(--radius-md); font-size: 13px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
+.search-input:focus { outline: none; border-color: #7F77DD; }
+.search-btn { background: #1D9E75; color: white; border: none; border-radius: var(--radius-md); padding: 9px 20px; font-size: 13px; font-weight: 500; cursor: pointer; transition: background 0.12s; white-space: nowrap; }
+.search-btn:hover { background: #0F6E56; }
+.cat-section-title { font-size: 12px; font-weight: 500; color: #3C3489; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 12px; }
+.cat-grid { display: grid; grid-template-columns: repeat(2, minmax(0,1fr)); gap: 14px; }
+.cat-card { border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); overflow: hidden; }
+.cat-header { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 12px 16px; cursor: pointer; background: #EEEDFE; transition: background 0.12s; }
+.cat-header:hover { background: #CECBF6; }
+.cat-header-left { display: flex; align-items: center; gap: 10px; }
+.cat-icon { width: 44px; height: 44px; border-radius: var(--radius-md); flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 24px; }
+.cat-name { font-size: 14.5px; font-weight: 500; color: #26215C; }
+.chevron { font-size: 13px; color: #534AB7; transition: transform 0.18s; flex-shrink: 0; }
+.cat-card.open .chevron { transform: rotate(180deg); }
+.cat-body { display: none; padding: 6px 8px; }
+.cat-card.open .cat-body { display: block; }
+.form-item { display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; border-radius: var(--radius-md); cursor: pointer; font-size: 13px; color: var(--text-secondary); transition: background 0.1s; }
+.form-item:hover { background: var(--bg-secondary); color: var(--text-primary); }
+.form-item-steps { font-size: 11px; color: var(--text-tertiary); white-space: nowrap; }
+.no-results { text-align: center; padding: 32px; color: var(--text-tertiary); font-size: 13px; display: none; }
+
+/* ===================== SUIVRE MES DEMANDES ===================== */
+.suivi-section { margin-bottom: 28px; }
+.suivi-section-title { display: flex; align-items: center; gap: 8px; font-size: 12px; font-weight: 500; color: #3C3489; letter-spacing: 0.06em; text-transform: uppercase; margin-bottom: 14px; }
+.suivi-empty { display: none; text-align: center; padding: 28px; color: var(--text-tertiary); font-size: 13px; border: 1px dashed var(--border-tertiary); border-radius: var(--radius-lg); }
+.suivi-card { display: flex; align-items: center; gap: 14px; padding: 14px 16px; border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); margin-bottom: 10px; }
+.suivi-card-icon { width: 38px; height: 38px; border-radius: var(--radius-md); background: #EEEDFE; color: #534AB7; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.suivi-card-main { flex: 1; min-width: 0; }
+.suivi-card-title { font-size: 13.5px; font-weight: 500; color: var(--text-primary); }
+.suivi-card-meta { font-size: 11.5px; color: var(--text-tertiary); margin-top: 3px; }
+.suivi-card-right { display: flex; align-items: center; gap: 10px; flex-shrink: 0; }
+.suivi-status { font-size: 11px; padding: 3px 10px; border-radius: 12px; font-weight: 500; white-space: nowrap; }
+.status-brouillon { background: #ECEAF4; color: #5C5775; }
+.status-encours { background: #E6F1FB; color: #185FA5; }
+.status-traitee { background: #EAF3DE; color: #3B6D11; }
+.status-annulee { background: #ECEAF4; color: #5C5775; }
+.status-rejetee { background: #FCEBEB; color: #A32D2D; }
+.suivi-card-action { font-size: 12px; color: #534AB7; cursor: pointer; background: none; border: none; font-family: inherit; white-space: nowrap; }
+.suivi-card-action:hover { text-decoration: underline; }
+
+/* ===================== ECRAN CONNEXION ===================== */
+.login-hero { background: #26215C; padding: 24px 32px; text-align: center; }
+.login-title { font-size: 22px; font-weight: 500; color: white; margin-bottom: 4px; }
+.login-sub { font-size: 13px; color: #CECBF6; }
+.login-wrap { display: flex; justify-content: center; padding: 40px 24px; background: var(--bg-secondary); }
+.login-card { background: var(--bg-primary); border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); width: 400px; padding: 28px 28px 24px; }
+.login-card-title { font-size: 16px; font-weight: 500; margin-bottom: 4px; text-align: center; }
+.login-card-sub { font-size: 12px; color: var(--text-secondary); text-align: center; margin-bottom: 22px; }
+.field { margin-bottom: 14px; }
+.field-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block; }
+.field-input-wrap { position: relative; }
+.field-icon { position: absolute; left: 11px; top: 50%; transform: translateY(-50%); font-size: 16px; color: var(--text-tertiary); }
+.field-input { width: 100%; padding: 9px 12px 9px 34px; border: 0.5px solid var(--border-secondary); border-radius: var(--radius-md); font-size: 13px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
+.field-input:focus { outline: none; border-color: #7F77DD; }
+.field-error { font-size: 11px; color: #A32D2D; margin-top: 4px; display: none; }
+.login-btn { width: 100%; background: #1D9E75; color: white; border: none; border-radius: var(--radius-md); padding: 10px; font-size: 13px; font-weight: 500; cursor: pointer; margin-top: 6px; transition: background 0.12s; }
+.login-btn:hover { background: #0F6E56; }
+.login-links { display: flex; justify-content: space-between; margin-top: 14px; }
+.link-btn { font-size: 12px; color: #534AB7; cursor: pointer; background: none; border: none; padding: 0; font-family: inherit; }
+.link-btn:hover { text-decoration: underline; }
+.login-view { display: none; }
+.login-view.active { display: block; }
+.back-link { font-size: 12px; color: var(--text-secondary); cursor: pointer; display: flex; align-items: center; gap: 4px; margin-bottom: 18px; }
+.back-link:hover { color: var(--text-primary); }
+.success-box { text-align: center; padding: 12px 0; }
+.success-icon { width: 44px; height: 44px; border-radius: 50%; background: #EAF3DE; color: #3B6D11; display: flex; align-items: center; justify-content: center; margin: 0 auto 14px; font-size: 22px; }
+.success-icon.pending { background: #FAEEDA; color: #854F0B; }
+.success-icon.danger { background: #FCEBEB; color: #A32D2D; }
+.success-title { font-size: 14px; font-weight: 500; margin-bottom: 6px; }
+.success-text { font-size: 12px; color: var(--text-secondary); line-height: 1.5; margin-bottom: 18px; }
+.field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
+.footer-note { text-align: center; padding: 16px 24px 24px; font-size: 11px; color: var(--text-tertiary); background: var(--bg-secondary); }
+.strength-bar { display: flex; gap: 4px; margin-top: 6px; }
+.strength-seg { height: 3px; flex: 1; border-radius: 2px; background: var(--bg-secondary); }
+.strength-seg.on-weak { background: #E24B4A; }
+.strength-seg.on-mid { background: #EF9F27; }
+.strength-seg.on-strong { background: #1D9E75; }
+.domain-badge { display: inline-flex; align-items: center; gap: 4px; font-size: 11px; padding: 2px 8px; border-radius: 10px; margin-top: 4px; }
+.domain-ok { background: #EAF3DE; color: #3B6D11; }
+.domain-bad { background: #FCEBEB; color: #A32D2D; }
+.simulate-row { display: flex; gap: 8px; margin-top: 16px; }
+.btn-secondary { flex: 1; background: transparent; border: 0.5px solid var(--border-secondary); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px; font-size: 12px; cursor: pointer; font-family: inherit; }
+.btn-secondary:hover { background: var(--bg-secondary); }
+.debug-note { margin-top: 18px; padding-top: 14px; border-top: 0.5px dashed var(--border-tertiary); font-size: 11px; color: var(--text-tertiary); line-height: 1.6; }
+.debug-note code { background: var(--bg-secondary); padding: 1px 5px; border-radius: 4px; font-family: monospace; }
+
+/* ===================== PANEL ADMIN ===================== */
+.admin-panel-toggle {
+  margin-left: auto;
+  padding: 8px 14px;
+  border: 1px solid rgba(255,255,255,0.18);
+  border-radius: 8px;
+  background: rgba(255,255,255,0.08);
+  color: #fff;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+  transition: background 0.12s ease, border-color 0.12s ease;
+}
+.admin-panel-toggle:hover {
+  background: rgba(255,255,255,0.15);
+  border-color: rgba(255,255,255,0.25);
+}
+.admin-panel {
+  margin-top: 18px;
+  background: #f7f5ff;
+  border: 1px solid var(--border-tertiary);
+  border-radius: 14px;
+  padding: 18px;
+}
+.admin-panel-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 14px;
+  margin-bottom: 16px;
+}
+.admin-panel-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #26215C;
+}
+.admin-panel-subtitle {
+  margin-top: 3px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.admin-refresh-btn,
+.admin-save-btn {
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  background: #fff;
+  color: var(--text-secondary);
+  padding: 7px 10px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-refresh-btn:hover,
+.admin-save-btn:hover {
+  border-color: #7F77DD;
+  color: #26215C;
+}
+.admin-section-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--border-tertiary);
+  margin-bottom: 18px;
+}
+.admin-section-tab {
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--text-secondary);
+  padding: 8px 12px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 12px;
+}
+.admin-section-tab.active {
+  border-bottom-color: #534AB7;
+  color: #26215C;
+  font-weight: 600;
+}
+.admin-grid {
+  display: grid;
+  grid-template-columns: minmax(280px, 1.2fr) minmax(300px, 1.8fr);
+  gap: 18px;
+}
+.admin-card {
+  background: #fff;
+  border: 1px solid var(--border-tertiary);
+  border-radius: 12px;
+  padding: 16px;
+}
+.admin-card-title {
+  font-size: 14px;
+  font-weight: 600;
+  color: #26215C;
+  margin-bottom: 12px;
+}
+.admin-form {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+.admin-field-row {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+}
+.admin-field {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+.admin-field input,
+.admin-field select {
+  width: 100%;
+  border: 1px solid var(--border-secondary);
+  border-radius: 8px;
+  padding: 9px 10px;
+  font: inherit;
+  color: var(--text-primary);
+  background: #fff;
+}
+.admin-field input:focus,
+.admin-field select:focus {
+  outline: none;
+  border-color: #7F77DD;
+}
+.admin-submit-btn {
+  margin-top: 6px;
+  border: none;
+  border-radius: 8px;
+  background: #1D9E75;
+  color: white;
+  padding: 10px 14px;
+  font: inherit;
+  font-weight: 500;
+  cursor: pointer;
+}
+.admin-submit-btn:hover {
+  background: #0F6E56;
+}
+.admin-user-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  max-height: 380px;
+  overflow: auto;
+}
+.admin-user-item {
+  border: 1px solid var(--border-tertiary);
+  border-radius: 10px;
+  padding: 10px 12px;
+  background: #fff;
+}
+.admin-user-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 7px;
+  margin-top: 10px;
+}
+.admin-user-edit input,
+.admin-user-edit select {
+  min-width: 0;
+  border: 1px solid var(--border-secondary);
+  border-radius: 7px;
+  padding: 7px 8px;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-user-edit .admin-save-btn {
+  grid-column: 1 / -1;
+  justify-self: end;
+}
+.admin-user-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: start;
+  gap: 10px;
+  margin-bottom: 6px;
+}
+.admin-user-name {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.admin-user-email {
+  font-size: 12px;
+  color: var(--text-secondary);
+  word-break: break-word;
+}
+.admin-user-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+  margin-bottom: 8px;
+  font-size: 11px;
+}
+.admin-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 3px 8px;
+  font-weight: 500;
+}
+.admin-badge.role-agent { background: #eceaf4; color: #5c5775; }
+.admin-badge.role-validator { background: #e6f1fb; color: #185fa5; }
+.admin-badge.role-admin { background: #eaf3de; color: #3b6d11; }
+.admin-badge.status-active { background: #eaf3de; color: #3b6d11; }
+.admin-badge.status-pending { background: #faeeda; color: #854f0b; }
+.admin-badge.status-expired { background: #fcebeb; color: #a32d2d; }
+.admin-delete-btn {
+  border: none;
+  border-radius: 7px;
+  background: #fcebeb;
+  color: #a32d2d;
+  padding: 6px 9px;
+  cursor: pointer;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-delete-btn:hover {
+  background: #f7d8d8;
+}
+.admin-empty-state {
+  padding: 14px;
+  border: 1px dashed var(--border-secondary);
+  border-radius: 10px;
+  color: var(--text-tertiary);
+  font-size: 12px;
+  text-align: center;
+}
+.admin-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 12px;
+  color: var(--text-secondary);
+  font-size: 12px;
+}
+.admin-toolbar select,
+.admin-request-status {
+  border: 1px solid var(--border-secondary);
+  border-radius: 7px;
+  background: #fff;
+  color: var(--text-primary);
+  padding: 7px 9px;
+  font: inherit;
+  font-size: 11px;
+}
+.admin-request-list {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.admin-request-item {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  border: 1px solid var(--border-tertiary);
+  border-radius: 10px;
+  background: #fff;
+  padding: 12px;
+}
+.admin-request-title {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--text-primary);
+}
+.admin-request-meta {
+  margin-top: 4px;
+  color: var(--text-secondary);
+  font-size: 11px;
+}
+.admin-request-controls {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+}
+@media (max-width: 760px) {
+  .tabs { flex-wrap: wrap; }
+  .admin-panel-toggle { margin-left: 0; }
+  .admin-grid { grid-template-columns: 1fr; }
+  .admin-panel-header { align-items: flex-start; }
+  .admin-request-item { grid-template-columns: 1fr; }
+  .admin-request-controls { justify-content: flex-start; }
+}
+
+/* ===================== ECRAN ARRIVEE/DEPART (wizard) ===================== */
+.wizard { font-family: var(--font-sans); color: var(--text-primary); }
+.wz-hero { background: #26215C; padding: 18px 28px; display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+.wz-title { font-size: 17px; font-weight: 500; color: white; }
+.wz-sub { font-size: 12px; color: #CECBF6; margin-top: 2px; }
+.wz-back { font-size: 12px; color: #CECBF6; cursor: pointer; display: flex; align-items: center; gap: 4px; }
+.wz-back:hover { color: white; }
+.wz-body { background: var(--bg-secondary); }
+.wz-layout { display: flex; }
+.wz-steps { width: 220px; flex-shrink: 0; background: var(--bg-primary); border-right: 0.5px solid var(--border-tertiary); padding: 18px 0; }
+.wz-step { display: flex; align-items: center; gap: 10px; padding: 10px 18px; cursor: pointer; position: relative; }
+.wz-step-num { width: 22px; height: 22px; border-radius: 50%; flex-shrink: 0; display: flex; align-items: center; justify-content: center; font-size: 11px; font-weight: 500; border: 1.5px solid var(--border-secondary); color: var(--text-tertiary); background: var(--bg-primary); }
+.wz-step.done .wz-step-num { background: #1D9E75; border-color: #1D9E75; color: white; }
+.wz-step.current .wz-step-num { border-color: #534AB7; color: #534AB7; }
+.wz-step-label { font-size: 12.5px; color: var(--text-tertiary); line-height: 1.3; }
+.wz-step.current .wz-step-label { color: #26215C; font-weight: 500; }
+.wz-step.done .wz-step-label { color: var(--text-secondary); }
+.wz-step-line { position: absolute; left: 29px; top: 38px; width: 1.5px; height: 18px; background: var(--border-tertiary); }
+.wz-step.done .wz-step-line { background: #1D9E75; }
+.wz-main { flex: 1; padding: 28px 36px; min-width: 0; }
+.wz-step-header { margin-bottom: 20px; }
+.wz-step-title { font-size: 16px; font-weight: 500; color: #26215C; }
+.wz-step-desc { font-size: 12.5px; color: var(--text-secondary); margin-top: 3px; }
+.wz-field { margin-bottom: 16px; }
+.wz-field-label { font-size: 12px; color: var(--text-secondary); margin-bottom: 5px; display: block; }
+.wz-field-label .req { color: #A32D2D; }
+.wz-input, .wz-select { width: 100%; padding: 9px 12px; border: 0.5px solid var(--border-secondary); border-radius: var(--radius-md); font-size: 13px; font-family: inherit; background: var(--bg-primary); color: var(--text-primary); }
+.wz-input:focus, .wz-select:focus { outline: none; border-color: #7F77DD; }
+.wz-row2 { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; }
+.wz-check-group { display: flex; flex-direction: column; gap: 8px; }
+.wz-check-item { display: flex; align-items: center; gap: 9px; padding: 9px 12px; border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-md); cursor: pointer; font-size: 13px; transition: all 0.12s; }
+.wz-check-item:hover { background: var(--bg-secondary); }
+.wz-check-item.checked { border-color: #5DCAA5; background: #E1F5EE; }
+.wz-checkbox { width: 16px; height: 16px; border-radius: 4px; border: 1.5px solid var(--border-secondary); flex-shrink: 0; display: flex; align-items: center; justify-content: center; }
+.wz-check-item.checked .wz-checkbox { background: #1D9E75; border-color: #1D9E75; }
+.wz-check-item.checked .wz-checkbox::after { content: ''; width: 7px; height: 5px; border-left: 1.5px solid white; border-bottom: 1.5px solid white; transform: rotate(-45deg) translate(1px,-1px); display: block; }
+.wz-radio-row { display: flex; gap: 10px; flex-wrap: wrap; }
+.wz-radio-item { flex: 1; min-width: 120px; padding: 10px 14px; border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-md); cursor: pointer; font-size: 13px; text-align: center; transition: all 0.12s; }
+.wz-radio-item:hover { background: var(--bg-secondary); }
+.wz-radio-item.selected { border-color: #534AB7; background: #EEEDFE; color: #26215C; font-weight: 500; }
+.wz-footer { display: flex; justify-content: space-between; align-items: center; padding: 16px 36px; border-top: 0.5px solid var(--border-tertiary); background: var(--bg-primary); }
+.wz-btn-ghost { background: transparent; border: 0.5px solid var(--border-secondary); color: var(--text-secondary); border-radius: var(--radius-md); padding: 8px 18px; font-size: 13px; cursor: pointer; font-family: inherit; }
+.wz-btn-ghost:hover { background: var(--bg-secondary); }
+.wz-btn-ghost:disabled { opacity: 0.4; cursor: not-allowed; }
+.wz-btn-primary { background: #1D9E75; color: white; border: none; border-radius: var(--radius-md); padding: 8px 20px; font-size: 13px; font-weight: 500; cursor: pointer; font-family: inherit; transition: background 0.12s; }
+.wz-btn-primary:hover { background: #0F6E56; }
+.wz-progress-text { font-size: 12px; color: var(--text-tertiary); }
+.wz-summary-section { margin-bottom: 18px; }
+.wz-summary-title { font-size: 12px; font-weight: 500; color: #534AB7; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 8px; }
+.wz-summary-row { display: flex; justify-content: space-between; padding: 7px 0; border-bottom: 0.5px solid var(--border-tertiary); font-size: 13px; }
+.wz-summary-key { color: var(--text-secondary); }
+.wz-summary-val { font-weight: 500; text-align: right; }
+.wz-success { text-align: center; padding: 30px 20px; }
+.wz-success-icon { width: 52px; height: 52px; border-radius: 50%; background: #EAF3DE; color: #3B6D11; display: flex; align-items: center; justify-content: center; margin: 0 auto 16px; font-size: 26px; }
+.wz-success-title { font-size: 17px; font-weight: 500; margin-bottom: 6px; }
+.wz-success-text { font-size: 13px; color: var(--text-secondary); margin-bottom: 6px; }
+.wz-success-ref { font-size: 12px; color: var(--text-tertiary); margin-top: 14px; }
+.wz-hint { font-size: 11px; color: var(--text-tertiary); margin-top: 4px; }
+.form-menu { padding: 28px 36px; }
+.form-menu-title { font-size: 12px; font-weight: 500; color: #3C3489; text-transform: uppercase; letter-spacing: 0.04em; margin-bottom: 14px; }
+.form-menu-grid { display: flex; flex-direction: column; gap: 10px; }
+.form-menu-item { display: flex; align-items: center; gap: 12px; padding: 14px 16px; border: 0.5px solid var(--border-tertiary); border-radius: var(--radius-lg); cursor: pointer; transition: all 0.12s; }
+.form-menu-item:hover { border-color: #7F77DD; background: #EEEDFE; }
+.form-menu-icon { width: 36px; height: 36px; border-radius: var(--radius-md); background: #9FE1CB; color: #085041; display: flex; align-items: center; justify-content: center; font-size: 18px; flex-shrink: 0; }
+.form-menu-text { flex: 1; }
+.form-menu-name { font-size: 14px; font-weight: 500; color: #26215C; }
+.form-menu-steps { font-size: 11.5px; color: var(--text-tertiary); margin-top: 2px; }
+.form-menu-arrow { color: var(--text-tertiary); font-size: 16px; }
+.wz-fixed-content { padding: 16px; background: var(--bg-secondary); border-radius: var(--radius-md); font-size: 13px; line-height: 1.5; color: var(--text-secondary); }
+.wz-fixed-content ul { margin: 0; padding-left: 20px; }
+.wz-fixed-content li { margin-bottom: 8px; }
+.wz-file-upload-container { margin-bottom: 20px; }
+.wz-file-upload-hint { font-size: 11px; color: var(--text-tertiary); margin-bottom: 8px; }
+.wz-file-input { display: none; }
+.wz-file-list { display: flex; flex-direction: column; gap: 8px; }
+.wz-file-item { display: flex; align-items: center; gap: 10px; padding: 10px 12px; background: var(--bg-secondary); border-radius: var(--radius-md); font-size: 13px; }
+.wz-file-name { flex: 1; color: var(--text-primary); }
+.wz-file-size { color: var(--text-tertiary); font-size: 11px; }
+.wz-file-remove { cursor: pointer; color: #A32D2D; font-size: 14px; font-weight: bold; }
+.wz-file-remove:hover { color: #8A2222; }
+</style>
+</head>
+<body>
+
+
+<!-- ===================== ECRAN ACCUEIL ===================== -->
+<div class="screen active" id="screen-accueil">
+  <div class="portal">
+    <div class="hero">
+      <div class="hero-title">Services internes</div>
+      <div class="hero-sub">La plateforme de services pour les agents</div>
+      <div class="tabs">
+        <div class="tab active" id="tab-accueil" >Accueil</div>
+        <div class="tab" id="tab-suivi" >Suivre mes demandes</div>
+        <button class="admin-panel-toggle" id="admin-panel-toggle" type="button" style="display:none;" onclick="toggleAdminPanel()">Administration</button>
+      </div>
+    </div>
+
+    <div class="body-area" id="admin-panel" style="display:none;">
+      <div class="admin-panel-header">
+        <div>
+          <div class="admin-panel-title">Administration</div>
+          <div class="admin-panel-subtitle">Gestion des comptes et du traitement des demandes</div>
+        </div>
+        <button class="admin-refresh-btn" type="button" onclick="refreshAdminData()">Actualiser</button>
+      </div>
+      <div class="admin-section-tabs">
+        <button class="admin-section-tab active" id="admin-section-users-tab" type="button" onclick="showAdminSection('users')">Comptes</button>
+        <button class="admin-section-tab" id="admin-section-requests-tab" type="button" onclick="showAdminSection('requests')">Demandes</button>
+      </div>
+      <div class="admin-grid" id="admin-users-section">
+        <div class="admin-card">
+          <div class="admin-card-title">Créer un compte</div>
+          <form id="admin-create-user-form" class="admin-form">
+            <div class="admin-field-row">
+              <div class="admin-field">
+                <label>Prénom</label>
+                <input type="text" id="admin-firstname" placeholder="Prénom" required>
+              </div>
+              <div class="admin-field">
+                <label>Nom</label>
+                <input type="text" id="admin-lastname" placeholder="Nom" required>
+              </div>
+            </div>
+            <div class="admin-field">
+              <label>E-mail</label>
+              <input type="email" id="admin-email" placeholder="prenom.nom@culture.gouv.fr" required>
+            </div>
+            <div class="admin-field">
+              <label>Mot de passe</label>
+              <input type="password" id="admin-password" placeholder="Minimum 8 caractères" required>
+            </div>
+            <div class="admin-field">
+              <label>Rôle</label>
+              <select id="admin-role">
+                <option value="agent">Agent</option>
+                <option value="validator">Valideur</option>
+                <option value="admin">Administrateur</option>
+                <option value="superAdmin">SuperAdmin</option>
+              </select>
+            </div>
+            <button type="submit" class="admin-submit-btn">Créer le compte</button>
+          </form>
+        </div>
+
+        <div class="admin-card">
+          <div class="admin-card-title">Comptes existants</div>
+          <div id="admin-user-list" class="admin-user-list"></div>
+        </div>
+      </div>
+      <div class="admin-requests-section" id="admin-requests-section" style="display:none;">
+        <div class="admin-toolbar">
+          <label for="admin-request-status-filter">Filtrer par statut</label>
+          <select id="admin-request-status-filter" onchange="renderAdminRequests()">
+            <option value="all">Toutes les demandes</option>
+            <option value="en_cours">En cours</option>
+            <option value="traitee">Traitées</option>
+            <option value="rejetee">Rejetées</option>
+            <option value="annulee">Annulées</option>
+          </select>
+        </div>
+        <div id="admin-request-list" class="admin-request-list"></div>
+      </div>
+    </div>
+
+    <div class="body-area" id="accueil-tab-view">
+      <div class="search-box">
+        <div class="search-label">Rechercher un formulaire par mot clé</div>
+        <div class="search-row">
+          <input class="search-input" type="text" id="search-input" placeholder="Exemple : badge, mobilier, reliure, véhicule..." oninput="filterCategories()"/>
+          <button class="search-btn" onclick="filterCategoriesReal()">Rechercher</button>
+        </div>
+      </div>
+      <div class="cat-section-title">Tous les formulaires par catégorie</div>
+      <div class="cat-grid" id="cat-grid"></div>
+      <div class="no-results" id="no-results">Aucun formulaire ne correspond à votre recherche.</div>
+    </div>
+
+    <div class="body-area" id="suivi-tab-view" style="display:none;">
+      <div class="suivi-section" id="validation-section" style="display:none;">
+        <div class="suivi-section-title">
+          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
+          Demandes en attente de validation
+        </div>
+        <div id="validation-list"></div>
+        <div class="suivi-empty" id="validation-empty">Aucune demande de dépense ne vous attend.</div>
+      </div>
+      <div class="suivi-section">
+        <div class="suivi-section-title">
+          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M7 3h7l4 4v14H7z"/><path d="M9.5 16.5l1-3 4-4 2 2-4 4z"/></svg></span>
+          Vos brouillons et demandes en cours de traitement
+        </div>
+        <div id="suivi-en-cours-list"></div>
+        <div class="suivi-empty" id="suivi-en-cours-empty">Aucune demande en cours pour le moment. Les demandes que vous envoyez depuis l'Accueil apparaîtront ici.</div>
+      </div>
+
+      <div class="suivi-section">
+        <div class="suivi-section-title">
+          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11h14V8"/><path d="M10 13h4"/></svg></span>
+          Vos demandes traitées / annulées / rejetées
+        </div>
+        <div id="suivi-terminees-list"></div>
+        <div class="suivi-empty" id="suivi-terminees-empty">Aucune demande traitée, annulée ou rejetée pour le moment.</div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<!-- ===================== ECRAN CONNEXION ===================== -->
+<div class="screen" id="screen-connexion">
+  <div class="login-hero">
+    <div class="login-title">Services internes</div>
+    <div class="login-sub">La plateforme de services pour les agents</div>
+  </div>
+  <div class="login-wrap">
+    <div class="login-card">
+
+      <div class="login-view active" id="view-login">
+        <div class="login-card-title">Connexion</div>
+        <div class="login-card-sub">Connectez-vous avec votre compte agent</div>
+        <div class="field">
+          <label class="field-label">Adresse e-mail professionnelle</label>
+          <div class="field-input-wrap">
+            <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
+            <input class="field-input" type="email" id="login-email" placeholder="prenom.nom@culture.gouv.fr"/>
+          </div>
+          <div class="field-error" id="err-login-email">Veuillez saisir une adresse e-mail valide.</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Mot de passe</label>
+          <div class="field-input-wrap">
+            <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+            <input class="field-input" type="password" id="login-pass" placeholder="••••••••"/>
+          </div>
+          <div class="field-error" id="err-login-pass">Veuillez saisir votre mot de passe.</div>
+        </div>
+        <button class="login-btn" onclick="trySubmitLogin()">Se connecter</button>
+        <div class="login-links">
+          <button class="link-btn" onclick="showLoginViewReal('forgot')">Mot de passe oublié ?</button>
+          <button class="link-btn" onclick="showLoginViewReal('signup')">Créer un compte</button>
+        </div>
+        <div class="debug-note">
+          <button class="btn-secondary" style="width:100%; border-style:dashed;" id="bypass-auth-btn">⚠ Bypass authentification (test uniquement)</button>
+        </div>
+      </div>
+
+      <div class="login-view" id="view-forgot">
+        <div class="back-link" onclick="showLoginViewReal('login')"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour à la connexion</div>
+        <div class="login-card-title">Mot de passe oublié</div>
+        <div class="login-card-sub">Recevez un lien de réinitialisation par e-mail</div>
+        <div class="field">
+          <label class="field-label">Adresse e-mail professionnelle</label>
+          <div class="field-input-wrap">
+            <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
+            <input class="field-input" type="email" id="forgot-email" placeholder="prenom.nom@culture.gouv.fr"/>
+          </div>
+          <div class="field-error" id="err-forgot-email">Veuillez saisir une adresse e-mail valide.</div>
+        </div>
+        <button class="login-btn" onclick="trySubmitForgot()">Envoyer le lien de réinitialisation</button>
+      </div>
+
+      <div class="login-view" id="view-forgot-success">
+        <div class="success-box">
+          <div class="success-icon"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span></div>
+          <div class="success-title">E-mail envoyé</div>
+          <div class="success-text">Si cette adresse correspond à un compte existant, un lien de réinitialisation a été envoyé.</div>
+          <button class="login-btn" onclick="showLoginViewReal('login')" style="width:auto; padding:9px 24px;">Retour à la connexion</button>
+        </div>
+      </div>
+
+      <div class="login-view" id="view-signup">
+        <div class="back-link" onclick="showLoginViewReal('login')"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour à la connexion</div>
+        <div class="login-card-title">Créer un compte</div>
+        <div class="login-card-sub">Inscription réservée aux agents culture.gouv.fr</div>
+        <div class="field-row">
+          <div class="field">
+            <label class="field-label">Prénom</label>
+            <input class="field-input" style="padding-left:12px" type="text" id="su-firstname" placeholder="Camille"/>
+          </div>
+          <div class="field">
+            <label class="field-label">Nom</label>
+            <input class="field-input" style="padding-left:12px" type="text" id="su-lastname" placeholder="Renard"/>
+          </div>
+        </div>
+        <div class="field">
+          <label class="field-label">Adresse e-mail professionnelle</label>
+          <div class="field-input-wrap">
+            <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="5" width="18" height="14" rx="1"/><path d="M3 6l9 7 9-7"/></svg></span>
+            <input class="field-input" type="email" id="su-email" placeholder="prenom.nom@culture.gouv.fr" oninput="checkDomain()"/>
+          </div>
+          <div id="domain-feedback"></div>
+          <div class="field-error" id="err-su-email">Veuillez saisir une adresse e-mail valide.</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Mot de passe</label>
+          <div class="field-input-wrap">
+            <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+            <input class="field-input" type="password" id="su-pass" placeholder="8 caractères minimum" oninput="checkStrength()"/>
+          </div>
+          <div class="strength-bar">
+            <div class="strength-seg" id="seg-1"></div>
+            <div class="strength-seg" id="seg-2"></div>
+            <div class="strength-seg" id="seg-3"></div>
+          </div>
+          <div class="field-error" id="err-su-pass">Le mot de passe doit contenir au moins 8 caractères.</div>
+        </div>
+        <div class="field">
+          <label class="field-label">Confirmer le mot de passe</label>
+          <div class="field-input-wrap">
+            <span class="svg-icon field-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg></span>
+            <input class="field-input" type="password" id="su-pass2" placeholder="••••••••"/>
+          </div>
+          <div class="field-error" id="err-su-pass2">Les mots de passe ne correspondent pas.</div>
+        </div>
+        <button class="login-btn" onclick="trySubmitSignup()">Créer mon compte</button>
+        <div class="debug-note">
+          Démo : utilisez <code>existant@culture.gouv.fr</code> pour simuler un compte déjà actif, ou <code>attente@culture.gouv.fr</code> pour un compte en attente. Les deux cas affichent le même message que pour un nouveau compte.
+        </div>
+      </div>
+
+      <div class="login-view" id="view-verify">
+        <div class="success-box">
+          <div class="success-icon pending"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-5 9 5v9H3z"/><path d="M3 9l9 5 9-5"/></svg></span></div>
+          <div class="success-title">Vérifiez votre boîte mail</div>
+          <div class="success-text">Si les conditions sont remplies, un e-mail de vérification a été envoyé à l'adresse fournie. Cliquez sur le lien qu'il contient pour activer votre compte.</div>
+          <div class="simulate-row">
+            <button class="btn-secondary" onclick="showLoginViewReal('signup')">Modifier l'e-mail</button>
+            <button class="btn-secondary" onclick="showLoginViewReal('activated')">Simuler le clic sur le lien ↗</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="login-view" id="view-activated">
+        <div class="success-box">
+          <div class="success-icon"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12l5 5 9-10"/></svg></span></div>
+          <div class="success-title">Compte activé</div>
+          <div class="success-text">Votre adresse e-mail a été vérifiée et votre compte est désormais actif. Vous pouvez vous connecter.</div>
+          <button class="login-btn" onclick="showLoginViewReal('login')" style="width:auto; padding:9px 24px;">Aller à la connexion</button>
+        </div>
+      </div>
+
+      <div class="login-view" id="view-domain-rejected">
+        <div class="success-box">
+          <div class="success-icon danger"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M6 6l12 12M18 6L6 18"/></svg></span></div>
+          <div class="success-title">Domaine non autorisé</div>
+          <div class="success-text">Seules les adresses e-mail du domaine <strong style="color:var(--text-primary)">culture.gouv.fr</strong> peuvent créer un compte sur cette plateforme.</div>
+          <button class="login-btn" onclick="showLoginViewReal('signup')" style="width:auto; padding:9px 24px;">Retour à l'inscription</button>
+        </div>
+      </div>
+
+    </div>
+  </div>
+  <div class="footer-note">Accès réservé aux agents culture.gouv.fr. En cas de difficulté, contactez le support informatique.</div>
+</div>
+
+<!-- ===================== ECRAN GENERIQUE CATEGORIE / FORMULAIRE ===================== -->
+
+<div class="screen" id="screen-categorie">
+  <div class="wizard">
+    <div class="wz-hero">
+      <div>
+        <div class="wz-title" id="hero-title">Catégorie</div>
+        <div class="wz-sub" id="hero-sub">Choisissez le formulaire correspondant à votre demande</div>
+      </div>
+      <div class="wz-back" id="hero-back" style="display:none;" onclick="backToMenu()"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg></span>Retour aux formulaires</div>
+    </div>
+    <div class="wz-body">
+      <div id="menu-view">
+        <div class="form-menu">
+          <div class="form-menu-title">Formulaires disponibles</div>
+          <div class="form-menu-grid" id="form-menu-grid"></div>
+        </div>
+      </div>
+      <div id="wizard-view" style="display:none;">
+        <div class="wz-layout">
+          <div class="wz-steps" id="wz-steps"></div>
+          <div style="flex:1; display:flex; flex-direction:column;">
+            <div class="wz-main" id="wz-main"></div>
+            <div class="wz-footer" id="wz-footer">
+              <button class="wz-btn-ghost" id="btn-prev" onclick="prevStep()">← Précédent</button>
+              <span class="wz-progress-text" id="wz-progress"></span>
+              <button class="wz-btn-primary" id="btn-next" onclick="nextStep()">Suivant →</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<script src="app.js"></script>
+</body>
+</html>

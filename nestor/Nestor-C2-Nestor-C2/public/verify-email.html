@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Vérifier l'e-mail — Portail Services Internes</title>
+  <style>
+    :root {
+      --bg-primary: #ffffff;
+      --bg-secondary: #f4f3f8;
+      --border-tertiary: #e3e1ee;
+      --border-secondary: #cfcbe2;
+      --text-primary: #1f1b3d;
+      --text-secondary: #5c5775;
+      --text-tertiary: #918ca8;
+      --radius-md: 8px;
+      --radius-lg: 14px;
+      --font-sans: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { font-family: var(--font-sans); color: var(--text-primary); background: var(--bg-secondary); }
+    .hero { background: #26215c; padding: 24px 32px; text-align: center; }
+    .hero-title { font-size: 22px; font-weight: 500; color: white; margin-bottom: 4px; }
+    .hero-sub { font-size: 13px; color: #cecbf6; }
+    .wrap { display: flex; justify-content: center; padding: 60px 24px; min-height: calc(100vh - 100px); align-items: flex-start; }
+    .card { background: white; border-radius: var(--radius-lg); padding: 40px; width: 100%; max-width: 400px; box-shadow: 0 4px 20px rgba(0, 0, 0, 0.08); }
+    .card-title { font-size: 20px; font-weight: 600; margin-bottom: 8px; color: var(--text-primary); }
+    .card-sub { font-size: 14px; color: var(--text-secondary); margin-bottom: 24px; }
+    .alert { padding: 12px 14px; border-radius: var(--radius-md); margin-bottom: 20px; font-size: 14px; }
+    .alert-error { background: #fef2f2; color: #dc2626; border: 1px solid #fecaca; }
+    .alert-success { background: #f0fdf4; color: #16a34a; border: 1px solid #bbf7d0; }
+    .link { color: #6b66f2; text-decoration: none; font-size: 14px; }
+    .link:hover { text-decoration: underline; }
+    .spinner { display: inline-block; width: 20px; height: 20px; border: 3px solid rgba(107, 102, 242, 0.2); border-radius: 50%; border-top-color: #6b66f2; animation: spin 1s ease-in-out infinite; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+  </style>
+</head>
+<body>
+  <div class="hero">
+    <div class="hero-title">Portail Services Internes</div>
+    <div class="hero-sub">Vérification de l'e-mail</div>
+  </div>
+  <div class="wrap">
+    <div class="card">
+      <div class="card-title">Vérification en cours</div>
+      <div class="card-sub">Veuillez patienter pendant que nous vérifions votre adresse e-mail.</div>
+      <div id="message" class="alert" style="display: none;"></div>
+      <div id="loading" style="text-align: center; margin: 20px 0;">
+        <div class="spinner"></div>
+        <p style="margin-top: 10px;">Vérification...</p>
+      </div>
+      <div style="margin-top: 20px; text-align: center;">
+        <a href="/" class="link">Retour à l'accueil</a>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Récupérer le token depuis l'URL
+    const urlParams = new URLSearchParams(window.location.search);
+    const token = urlParams.get('token');
+
+    const messageEl = document.getElementById('message');
+    const loadingEl = document.getElementById('loading');
+
+    if (!token) {
+      messageEl.textContent = 'Token manquant. Veuillez vérifier le lien.';
+      messageEl.className = 'alert alert-error';
+      messageEl.style.display = 'block';
+      loadingEl.style.display = 'none';
+    } else {
+      // Appeler l'API pour vérifier l'e-mail
+      fetch(`/api/auth/verify-email?token=${token}`)
+        .then((response) => response.json())
+        .then((data) => {
+          if (data.error) {
+            throw new Error(data.error);
+          }
+          messageEl.textContent = data.message || 'Votre compte a été activé avec succès !';
+          messageEl.className = 'alert alert-success';
+          messageEl.style.display = 'block';
+          loadingEl.style.display = 'none';
+
+          // Rediriger après 3 secondes
+          setTimeout(() => {
+            window.location.href = '/';
+          }, 3000);
+        })
+        .catch((err) => {
+          messageEl.textContent = err.message;
+          messageEl.className = 'alert alert-error';
+          messageEl.style.display = 'block';
+          loadingEl.style.display = 'none';
+        });
+    }
+  </script>
+</body>
+</html>

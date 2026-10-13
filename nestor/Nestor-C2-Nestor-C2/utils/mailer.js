@@ -1,0 +1,178 @@
+// Envoi d'e-mails via le serveur SMTP interne fourni par le service
+// informatique. Toutes les valeurs de connexion viennent de .env —
+// aucune information de connexion n'est codée en dur ici.
+
+const nodemailer = require('nodemailer');
+const {
+  EMAIL_VERIFICATION_TTL_HOURS,
+  PASSWORD_RESET_TTL_HOURS,
+  PASSWORD_SETUP_TTL_HOURS,
+} = require('./tokens');
+
+const transporter = nodemailer.createTransport({
+  host: process.env.SMTP_HOST,
+  port: parseInt(process.env.SMTP_PORT || '587', 10),
+  secure: process.env.SMTP_SECURE === 'true',
+  auth: process.env.SMTP_USER
+    ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
+    : undefined,
+  tls: {
+    // Certificat auto-signé toléré uniquement si SMTP_REJECT_UNAUTHORIZED=false
+    rejectUnauthorized: process.env.SMTP_REJECT_UNAUTHORIZED !== 'false',
+  },
+});
+
+function checkSMTPConfig() {
+  const requiredVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'];
+  return requiredVars.every((varName) => process.env[varName]);
+}
+
+async function verifySmtpConnection() {
+  if (!checkSMTPConfig()) {
+    console.warn('[MAILER] SMTP non configuré. Vérification de connexion ignorée.');
+    return false;
+  }
+
+  try {
+    await transporter.verify();
+    console.log('[MAILER] Connexion SMTP OK.');
+    return true;
+  } catch (err) {
+    console.error('[MAILER] Impossible de vérifier la connexion SMTP :', err.message);
+    return false;
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+function formatDuration(hours) {
+  return hours === 1 ? '1 heure' : `${hours} heures`;
+}
+
+function buttonHtml(link, label) {
+  const safeLink = escapeHtml(link);
+  return `
+    <p style="text-align: center; margin: 20px 0;">
+      <a href="${safeLink}" style="background: #3498db; color: white; padding: 12px 24px; text-decoration: none; border-radius: 4px;">
+        ${escapeHtml(label)}
+      </a>
+    </p>
+    <p style="font-size: 12px; color: #666;">Si le bouton ne fonctionne pas, copiez ce lien : ${safeLink}</p>`;
+}
+
+// Envoi générique : renvoie true/false, ne lève jamais d'exception pour ne
+// pas casser le parcours appelant (l'erreur est journalisée). En l'absence
+// de SMTP, le lien est affiché en console hors production pour faciliter
+// les tests.
+async function sendMail({ to, subject, html, text, devLink }) {
+  if (!checkSMTPConfig()) {
+    console.log(`[MAILER] SMTP non configuré. E-mail "${subject}" non envoyé à ${to}.`);
+    if (devLink && process.env.NODE_ENV !== 'production') {
+      console.log('[MAILER] Lien (dev) :', devLink);
+    }
+    return false;
+  }
+
+  try {
+    await transporter.sendMail({
+      from: `"Nestor-C2" <${process.env.SMTP_FROM || process.env.SMTP_USER}>`,
+      to,
+      subject,
+      html: `<div style="font-family: Arial, sans-serif; max-width: 600px; margin: 0 auto;">${html}</div>`,
+      text,
+    });
+    return true;
+  } catch (err) {
+    console.error('[MAILER] Erreur:', err.message);
+    return false;
+  }
+}
+
+async function sendVerificationEmail(email, firstName, verificationLink) {
+  const duration = formatDuration(EMAIL_VERIFICATION_TTL_HOURS);
+  return sendMail({
+    to: email,
+    subject: 'Vérifiez votre adresse e-mail - Nestor-C2',
+    devLink: verificationLink,
+    html: `
+      <h2>Vérifiez votre adresse e-mail</h2>
+      <p>Bonjour ${escapeHtml(firstName)},</p>
+      <p>Pour finaliser votre inscription, cliquez sur le lien ci-dessous :</p>
+      ${buttonHtml(verificationLink, 'Vérifier mon e-mail')}
+      <p>Ce lien expirera dans ${duration}.</p>`,
+    text: `Bonjour ${firstName},\n\nPour finaliser votre inscription, visitez : ${verificationLink}\n\nCe lien expirera dans ${duration}.`,
+  });
+}
+
+async function sendPasswordResetEmail(email, resetLink) {
+  const duration = formatDuration(PASSWORD_RESET_TTL_HOURS);
+  return sendMail({
+    to: email,
+    subject: 'Réinitialisation de votre mot de passe - Nestor-C2',
+    devLink: resetLink,
+    html: `
+      <h2>Réinitialisation du mot de passe</h2>
+      <p>Une demande de réinitialisation a été faite pour votre compte.</p>
+      ${buttonHtml(resetLink, 'Choisir un nouveau mot de passe')}
+      <p>Ce lien expirera dans ${duration}. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.</p>`,
+    text: `Pour choisir un nouveau mot de passe, visitez : ${resetLink}\n\nCe lien expirera dans ${duration}. Si vous n'êtes pas à l'origine de cette demande, ignorez ce message.`,
+  });
+}
+
+async function sendPasswordSetupEmail(email, setupLink) {
+  const duration = formatDuration(PASSWORD_SETUP_TTL_HOURS);
+  return sendMail({
+    to: email,
+    subject: 'Activation de votre compte valideur - Nestor-C2',
+    devLink: setupLink,
+    html: `
+      <h2>Activation de votre compte</h2>
+      <p>Un compte valideur a été créé pour vous sur le portail Nestor-C2.</p>
+      ${buttonHtml(setupLink, 'Définir mon mot de passe')}
+      <p>Ce lien expirera dans ${duration}.</p>`,
+    text: `Un compte valideur a été créé pour vous. Définissez votre mot de passe : ${setupLink}\n\nCe lien expirera dans ${duration}.`,
+  });
+}
+
+async function sendExpenseValidationEmail(email, firstName, request) {
+  const link = `${process.env.PUBLIC_BASE_URL}/`;
+  return sendMail({
+    to: email,
+    subject: `Demande de dépense à valider - ${request.reference}`,
+    devLink: link,
+    html: `
+      <h2>Demande de dépense à valider</h2>
+      <p>Bonjour ${escapeHtml(firstName)},</p>
+      <p>Une demande de dépense vous a été attribuée pour validation.</p>
+      <p><strong>${escapeHtml(request.title)}</strong><br>Référence : ${escapeHtml(request.reference)}</p>
+      <p>Connectez-vous au portail pour consulter la demande et apposer votre signature électronique simple :</p>
+      <p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>`,
+    text: `Bonjour ${firstName || ''},\n\nLa demande ${request.reference} (${request.title}) attend votre validation. Connectez-vous au portail : ${link}`,
+  });
+}
+
+async function sendTestEmail(to) {
+  return sendMail({
+    to,
+    subject: 'Test d’envoi - Nestor-C2',
+    html: '<h2>Test d’envoi</h2><p>Si vous lisez ce message, la configuration SMTP de Nestor-C2 fonctionne.</p>',
+    text: 'Si vous lisez ce message, la configuration SMTP de Nestor-C2 fonctionne.',
+  });
+}
+
+module.exports = {
+  sendTestEmail,
+  sendVerificationEmail,
+  sendPasswordResetEmail,
+  sendPasswordSetupEmail,
+  sendExpenseValidationEmail,
+  checkSMTPConfig,
+  verifySmtpConnection,
+};
