@@ -31,6 +31,10 @@ async function main() {
   if (!process.env.PUBLIC_BASE_URL) report('fail', 'PUBLIC_BASE_URL', 'absent : les liens des e-mails seraient invalides');
   else report('ok', 'PUBLIC_BASE_URL', process.env.PUBLIC_BASE_URL);
 
+  if (process.env.ALLOW_TEST_BYPASS === 'true') {
+    report('warn', 'ALLOW_TEST_BYPASS=true', 'le bouton TEST ouvre une session SANS mot de passe : à désactiver en production');
+  }
+
   if (process.env.EMAIL_VERIFICATION_REQUIRED === 'false') {
     report('warn', 'EMAIL_VERIFICATION_REQUIRED=false', 'les comptes sont activés SANS vérification d’e-mail');
   }

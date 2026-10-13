@@ -85,7 +85,7 @@ const authLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   skipSuccessfulRequests: true,
-  skip: (req) => req.path === '/me' || req.path === '/logout',
+  skip: (req) => ['/me', '/logout', '/config'].includes(req.path),
   message: { error: 'Trop de tentatives. Veuillez réessayer plus tard.' },
 });
 
@@ -206,6 +206,13 @@ async function ensureDatabase() {
 async function startServer() {
   await ensureDatabase();
   startPurgeSchedule();
+
+  if (process.env.ALLOW_TEST_BYPASS === 'true') {
+    console.warn(
+      '\n[SÉCURITÉ] ALLOW_TEST_BYPASS=true : le bouton « TEST » permet de se connecter SANS mot de passe.\n' +
+      '[SÉCURITÉ] À n\'utiliser que sur un environnement de test, jamais en production.\n'
+    );
+  }
 
   if (useHttps) {
     if (!process.env.TLS_KEY_PATH || !process.env.TLS_CERT_PATH) {

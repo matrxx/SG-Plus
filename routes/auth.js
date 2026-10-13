@@ -196,27 +196,71 @@ router.post(
   }
 );
 
-// POST /api/auth/bypass
-router.post('/bypass', (req, res) => {
-  // Le bypass reste disponible tant que le connecteur Exchange n'est pas
-  // configuré. Il permet de continuer à tester le front sans casser la version.
-  const isRender = process.env.RENDER_ENV === 'true' || req.headers.host?.includes('nestor-c2.onrender.com');
-  const exchangeConfigured = isExchangeConfigured();
+// ---------------------------------------------------------------
+// MODE TEST : bouton « TEST » de la page de connexion.
+//
+// ⚠ Ouvre une session SANS mot de passe : réservé aux environnements de test.
+// Il est INACTIF par défaut et ne s'active que par ALLOW_TEST_BYPASS=true dans
+// le .env (jamais en production). Quand il est inactif, la route répond 404 et
+// la page ne propose pas le bouton.
+//
+// La session est celle d'un compte de test dédié (pas d'un vrai utilisateur),
+// sans mot de passe : il ne peut pas se connecter par le formulaire. Son rôle
+// se règle avec TEST_BYPASS_ROLE (agent | validator | admin | superAdmin,
+// « agent » par défaut).
+// ---------------------------------------------------------------
+const BYPASS_ROLES = ['agent', 'validator', 'admin', 'superAdmin'];
+const BYPASS_EMAIL = 'test.bypass@culture.gouv.fr';
 
-  if (!exchangeConfigured && process.env.NODE_ENV !== 'test' && process.env.NODE_ENV !== 'development' && !isRender) {
-    return res.status(403).json({ error: "Cette route est désactivée." });
+function isBypassEnabled() {
+  return process.env.ALLOW_TEST_BYPASS === 'true';
+}
+
+function bypassRole() {
+  return BYPASS_ROLES.includes(process.env.TEST_BYPASS_ROLE) ? process.env.TEST_BYPASS_ROLE : 'agent';
+}
+
+// GET /api/auth/config — ce que la page de connexion a le droit de proposer
+router.get('/config', (req, res) => res.json({ testBypass: isBypassEnabled() }));
+
+// POST /api/auth/bypass
+router.post('/bypass', async (req, res) => {
+  if (!isBypassEnabled()) {
+    return res.status(404).json({ error: 'Cette route est désactivée.' });
   }
 
-  req.session.userId = 1;
-  req.session.userEmail = 'test@culture.gouv.fr';
-  req.session.userRole = 'admin';
-  req.session.userFirstName = 'Test';
-  req.session.userLastName = 'Utilisateur';
+  try {
+    const { rows } = await pool.query(
+      `INSERT INTO users (email, first_name, last_name, password_hash, role, status, email_verified)
+       VALUES ($1, 'Compte', 'de test', '', $2::user_role, 'active', TRUE)
+       ON CONFLICT (email) DO UPDATE SET role = EXCLUDED.role, status = 'active'
+       RETURNING id, email, first_name, last_name, role`,
+      [BYPASS_EMAIL, bypassRole()]
+    );
+    const u = rows[0];
 
-  return res.json({
-    message: 'Bypass activé.',
-    user: { email: 'test@culture.gouv.fr', role: 'admin', firstName: 'Test', lastName: 'Utilisateur' },
-  });
+    // Nouvelle session (évite de réutiliser un identifiant de session existant)
+    req.session.regenerate((err) => {
+      if (err) {
+        console.error('[auth/bypass] Erreur de session :', err);
+        return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
+      }
+      req.session.userId = u.id;
+      req.session.userEmail = u.email;
+      req.session.userRole = u.role;
+      req.session.userFirstName = u.first_name;
+      req.session.userLastName = u.last_name;
+
+      console.warn(`[sécurité] Connexion de TEST sans mot de passe (rôle ${u.role}) depuis ${req.socket.remoteAddress}.`);
+      return res.json({
+        message: 'Session de test ouverte.',
+        user: { email: u.email, role: u.role, firstName: u.first_name, lastName: u.last_name },
+      });
+    });
+  } catch (err) {
+    console.error('[auth/bypass] Erreur :', err);
+    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
+  }
 });
 
 // ---------------------------------------------------------------

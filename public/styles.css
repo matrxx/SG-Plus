@@ -233,6 +233,12 @@ a { color: var(--accent); }
 .login-card { width: 100%; max-width: 440px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--radius-lg); padding: 34px 34px 30px; }
 .login-card-title { font-family: var(--font-display); font-weight: 400; font-size: 26px; line-height: 1.2; color: var(--ink); margin-bottom: 6px; }
 .login-card-sub { font-size: 15px; color: var(--ink-2); margin-bottom: 24px; }
+/* Mode test (bouton TEST) : volontairement distinct pour qu'on ne l'oublie pas */
+.bypass-box { width: 100%; max-width: 440px; margin-top: 16px; padding: 12px 16px; display: flex; align-items: center; gap: 14px; background: var(--warn-bg); border: 1px dashed var(--warn); border-radius: var(--radius-lg); }
+.bypass-btn { background: var(--surface); color: var(--warn); border: 1px solid var(--warn); border-radius: var(--radius); height: 38px; padding: 0 22px; font-size: 14px; font-weight: 700; letter-spacing: .08em; }
+.bypass-btn:hover { background: var(--warn); color: #fff; }
+.bypass-btn:disabled { opacity: .55; cursor: not-allowed; }
+.bypass-note { font-size: 13.5px; color: #4A3000; }
 .auth-footnote { max-width: 440px; margin-top: 18px; font-size: 13px; color: var(--ink-3); text-align: left; }
 .login-view { display: none; }
 .login-view.active { display: block; }

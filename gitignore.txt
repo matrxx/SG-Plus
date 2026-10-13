@@ -1,0 +1,44 @@
+# Environnement
+.env
+.env.local
+.env.*.local
+# Copie du .env contenant de vrais secrets : ne jamais publier (le modèle à
+# publier est .env.example, qui ne contient que des valeurs factices)
+exemple.env
+
+# Dépendances
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Certificats TLS (générés localement)
+*.key
+*.crt
+*.pem
+
+# Base de données (si dump local)
+.devdb/
+uploads/*
+!uploads/.gitkeep
+*.dump
+*.backup
+
+# Fichiers temporaires
+*.tmp
+*.temp

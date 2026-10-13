@@ -315,6 +315,13 @@
         </div>
 
       </div>
+
+      <!-- Mode test : affiché uniquement si le serveur l'autorise (ALLOW_TEST_BYPASS=true) -->
+      <div class="bypass-box" id="bypass-box" style="display:none;">
+        <button type="button" class="bypass-btn" id="bypass-btn" data-onclick="bypassAuth()">TEST</button>
+        <span class="bypass-note">Accès de test sans mot de passe</span>
+      </div>
+
       <p class="auth-footnote">Accès réservé aux agents culture.gouv.fr. En cas de difficulté, contactez le support informatique.</p>
     </div>
   </div>

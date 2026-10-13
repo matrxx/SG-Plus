@@ -595,6 +595,42 @@ function updateUIForAuthState() {
   }
 }
 
+// Mode test : le serveur indique s'il autorise le bouton « TEST » (ALLOW_TEST_BYPASS).
+// Sans réponse positive, le bouton reste caché.
+async function loadAuthConfig() {
+  const box = document.getElementById('bypass-box');
+  if (!box) return;
+  try {
+    const response = await fetch('/api/auth/config');
+    const data = await readApiJson(response);
+    box.style.display = response.ok && data.testBypass === true ? 'flex' : 'none';
+  } catch (err) {
+    box.style.display = 'none';
+  }
+}
+
+// Connexion de test sans mot de passe (bouton « TEST »)
+async function bypassAuth() {
+  const button = document.getElementById('bypass-btn');
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch('/api/auth/bypass', { method: 'POST' });
+    const data = await readApiJson(response);
+    if (!response.ok) {
+      alert(data.error || "Impossible d'ouvrir la session de test.");
+      return;
+    }
+    currentUser = data.user;
+    showAuthenticatedUI();
+    renderSuiviLists();
+  } catch (err) {
+    console.error('Erreur:', err);
+    alert(describeApiError(err, "Impossible d'ouvrir la session de test."));
+  } finally {
+    if (button) button.disabled = false;
+  }
+}
+
 // Connexion
 async function trySubmitLogin() {
   const email = document.getElementById('login-email').value.trim();
@@ -1891,6 +1927,7 @@ function initApp() {
   renderCategories('');
   bindAdminForm();
   checkAuth();
+  loadAuthConfig();
 
   // Fenêtre de détail : un clic sur le fond sombre la referme (Échap fonctionne déjà)
   const detailDialog = document.getElementById('detail-dialog');
