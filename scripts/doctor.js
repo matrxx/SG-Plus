@@ -35,6 +35,10 @@ async function main() {
     report('warn', 'ALLOW_TEST_BYPASS=true', 'le bouton TEST ouvre une session SANS mot de passe : à désactiver en production');
   }
 
+  if ((process.env.AUTH_MODE || '').toLowerCase() === 'exchange') {
+    report('warn', 'AUTH_MODE=exchange', 'la connexion passe par EXCHANGE_AUTH_URL, pas par les comptes locaux : pour utiliser un compte local, retirez AUTH_MODE du .env');
+  }
+
   if (process.env.EMAIL_VERIFICATION_REQUIRED === 'false') {
     report('warn', 'EMAIL_VERIFICATION_REQUIRED=false', 'les comptes sont activés SANS vérification d’e-mail');
   }
@@ -51,6 +55,21 @@ async function main() {
     const missing = need.filter((n) => !have.has(n));
     if (missing.length) report('fail', 'Migrations', `tables manquantes : ${missing.join(', ')} → lancez npm run migrate`);
     else report('ok', 'Migrations', 'toutes les tables sont présentes');
+
+    // Comptes : une base neuve (autre machine, autre dev-db) n'a aucun utilisateur,
+    // d'où une connexion qui échoue alors que tout semble démarré.
+    if (have.has('users')) {
+      const u = await pool.query(
+        `SELECT role, status, (password_hash IS NOT NULL AND password_hash <> '') AS has_password, COUNT(*)::int AS n
+           FROM users GROUP BY role, status, has_password ORDER BY role`
+      );
+      const loginable = u.rows.filter((r) => r.status === 'active' && r.has_password).reduce((s, r) => s + r.n, 0);
+      if (loginable === 0) {
+        report('fail', 'Comptes', 'aucun compte actif avec mot de passe dans CETTE base → npm run create-admin -- adresse@culture.gouv.fr "Prénom" "Nom"');
+      } else {
+        report('ok', 'Comptes', u.rows.map((r) => `${r.n} ${r.role}/${r.status}${r.has_password ? '' : ' sans mot de passe'}`).join(', '));
+      }
+    }
   } catch (err) {
     let target = 'DATABASE_URL absent';
     try {
