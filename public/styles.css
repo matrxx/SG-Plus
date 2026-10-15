@@ -321,7 +321,12 @@ a { color: var(--accent); }
 .admin-badge.status-active { background: var(--ok-bg); color: var(--ok); }
 .admin-badge.status-pending { background: var(--warn-bg); color: var(--warn); }
 .admin-badge.status-expired { background: var(--danger-bg); color: var(--danger); }
+.admin-badge.status-disabled { background: var(--neutral-bg); color: var(--ink-2); border: 1px solid var(--line-strong); }
 .admin-badge.mail-warn { background: var(--warn-bg); color: var(--warn); }
+.admin-user-actions { display: flex; flex-wrap: wrap; gap: 8px; justify-content: flex-end; }
+.admin-toggle-btn { border: 1px solid var(--line-strong); border-radius: var(--radius); background: var(--surface); color: var(--ink); padding: 6px 12px; font-size: 13px; font-weight: 600; }
+.admin-toggle-btn:hover { background: var(--surface-2); border-color: var(--ink-3); }
+.admin-self { font-weight: 400; color: var(--ink-3); }
 .admin-request-item .admin-user-meta { margin: 8px 0 0; }
 .admin-user-edit { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
 .admin-user-edit .admin-save-btn { grid-column: 1 / -1; justify-self: end; }
