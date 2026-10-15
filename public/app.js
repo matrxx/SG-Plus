@@ -13,11 +13,20 @@ let currentFormKey = null;
 let currentStep = 1;
 let formData = {};
 let submittedRequests = [];
+let uploadedFiles = {};      // fichiers déposés par étape : { [étape]: [{ id, name, size }] }
+let uploadsInProgress = 0;   // dépôts en cours (bloque l'avancement)
+let submittingForm = false;  // envoi en cours (anti double-clic)
 
-const sampleRequests = [
-  { id: 1, ref: 'BR-2024-001', title: 'Demande de fournitures courantes', category: 'Fournitures', date: '12/08/2026', status: 'en_cours' },
-  { id: 2, ref: 'BR-2024-002', title: 'Réservation de véhicule', category: 'Véhicule', date: '08/08/2026', status: 'traitee' }
-];
+const statusLabels = {
+  brouillon: { label: 'Brouillon', cls: 'status-brouillon' },
+  en_cours: { label: 'En cours', cls: 'status-encours' },
+  en_attente_validation: { label: 'En attente de validation', cls: 'status-encours' },
+  validee_responsable: { label: 'Validée par le responsable', cls: 'status-traitee' },
+  transmise_budget: { label: 'Transmise au service budget', cls: 'status-traitee' },
+  traitee: { label: 'Traitée', cls: 'status-traitee' },
+  annulee: { label: 'Annulée', cls: 'status-annulee' },
+  rejetee: { label: 'Rejetée', cls: 'status-rejetee' },
+};
 
 // -----------------------------------------------------------------------------
 // Données statiques (icônes, catégories, formulaires)
@@ -72,6 +81,7 @@ const svgIcons = {
   lock: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="11" width="14" height="9" rx="1"/><path d="M8 11V7a4 4 0 018 0v4"/></svg>',
   arrowLeft: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   budget: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 19h16"/><path d="M7 16V8"/><path d="M12 16V5"/><path d="M17 16v-7"/><path d="M5 8h3M10 5h3M15 9h3"/><path d="M6 20V17"/><path d="M18 20V17"/></svg>',
+  Budgets: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M19 12H5M11 6l-6 6 6 6"/></svg>',
   building: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="5" y="3" width="14" height="18"/><path d="M9 7h2M13 7h2M9 11h2M13 11h2M9 15h2M13 15h2"/></svg>',
   userCheck: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="8" r="3.5"/><path d="M3 20c0-3.5 2.7-6 6-6s6 2.5 6 6"/><path d="M16 11l2 2 3-3"/></svg>',
   chevronDown: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M6 9l6 6 6-6"/></svg>',
@@ -89,8 +99,6 @@ function icon(name, extraStyle) {
 // Métadonnées des catégories
 const categoryMeta = [
   { key: 'arrivee-depart', icon: 'walk', bg: '#9FE1CB', fg: '#085041' },
-  { key: 'fournitures', icon: 'package', bg: '#F5C4B3', fg: '#712B13' },
-  { key: 'budget', icon: 'budget', bg: '#B5D4F4', fg: '#0C447C' },
   { key: 'menage', icon: 'spray', bg: '#F4C0D1', fg: '#72243E' },
   { key: 'intervention-technique', icon: 'tool', bg: '#FAC775', fg: '#633806' },
   { key: 'acces-sites', icon: 'badge', bg: '#85B7EB', fg: '#042C53' },
@@ -100,273 +108,7 @@ const categoryMeta = [
   { key: 'evenementiel', icon: 'confetti', bg: '#ED93B1', fg: '#4B1528' },
  //  { key: 'oeuvres-art', icon: 'palette', bg: '#97C459', fg: '#173404' }
 ];
-const categoryForms = {
-  'arrivee-depart': {
-    title: 'Arrivée/Départ',
-    forms: {
-      arrivee: {
-        title: "Arrivée d'un nouvel agent",
-        ref: "ARR",
-        icon: 'doorEnter',
-        steps: [
-          { label: "Pré-requis à la demande d'installation", title: "Pré-requis à la demande d'installation", desc: "Avant de commencer, confirmez les éléments suivants", type: 'checklist', items: ["La date d'arrivée de l'agent est confirmée par le service RH", "Le poste de travail (bureau) est identifié et disponible", "Le responsable hiérarchique de l'agent est informé"] },
-          { label: "Informations sur l'agent concerné", title: "Informations sur l'agent concerné", desc: "Renseignez l'identité du nouvel agent", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail", req: true, type: 'email'}, {label: "Date d'arrivée", req: true, type: 'date'}, {label: "Service / direction", req: true}, {label: "Fonction"}] },
-          { label: "Contexte de l'arrivée", title: "Contexte de l'arrivée", desc: "Précisez le type de contrat et la localisation", type: 'mixed', radio: { label: "Type de contrat", req: true, options: ["Fonctionnaire", "Contractuel", "Stage / alternance", "Vacataire"] }, fields: [{ label: "Site / bâtiment", req: true, options: ["Paris Carrousel", "Paris Flore", "Versailles aile Paris", "Versailles aile Sceaux"] }, { label: "Numéro de bureau" }] },
-          { label: "Mobilier", title: "Mobilier", desc: "Sélectionnez les éléments à installer", type: 'checklist', items: ["Bureau", "Chaise ergonomique", "Caisson de rangement", "Armoire", "Porte-manteau"] },
-          { label: "Poste de travail informatique", title: "Poste de travail informatique", desc: "Sélectionnez le type d'ordinateur et les accessoires nécessaires", type: 'mixed', radio: { label: "Type d'ordinateur", req: true, options: ["Ordinateur portable MCC", "Ordinateur fixe", "Déjà existant", "Ordinateur mutualisé"] }, fields: [{ label: "Autre précision" }] },
-          { label: "Équipements informatiques nécessaires", title: "Équipements informatiques nécessaires", desc: "Choisissez les équipements à installer", type: 'checklist', items: ["Écran spécifique", "Double écran", "Souris ergonomique", "Casque audio"] },
-          { label: "Droits d'accès aux dossiers sur le réseau", title: "Droits d'accès aux dossiers sur le réseau", desc: "Sélectionnez les accès requis", type: 'checklist', items: ["Profil direction", "Profil Secrétariat général", "Profil Recherche", "Profil Restauration", "Profil Régie", "CoDir", "Pas d'accès"] },
-          { label: "Téléphonie fixe", title: "Téléphonie fixe", desc: "Configuration de la ligne téléphonique", type: 'mixed', radio: { label: "Type de ligne", req: true, options: ["Poste fixe individuel", "Ligne partagée", "Aucune"] }, fields: [{ label: "Numéro à transférer (si remplacement)" }] },
-          { label: "Téléphonie mobile", title: "Téléphonie mobile", desc: "Configuration de la ligne mobile", type: 'mixed', radio: { label: "Type de ligne", req: true, options: ["Nouveau mobile", "Récupération mobile existant", "Aucune"] }, fields: [{ label: "Numéro à récupérer (si repris de l'existant)" }] },
-          { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-        ]
-      },
-      demenagement: { title: "Déménagement d'un agent", ref: "DEM", icon: 'truck', steps: [
-        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le déménagement", desc: "Identité et localisation actuelle/nouvelle", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail professionnel", req: true, type: 'email'}, {label: "Bureau actuel", req: true}, {label: "Nouveau bureau", req: true}, {label: "Date du déménagement", req: true, type: 'date'}] },
-        { label: "Mobilier à déménager", title: "Mobilier à déménager", desc: "Sélectionnez les éléments concernés", type: 'checklist', items: ["Bureau","Chaise","Caisson de rangement","Armoire","Étagères"] },
-        { label: "Informatique à déménager", title: "Informatique à déménager", desc: "Équipements informatiques à transférer", type: 'checklist', items: ["Unité centrale / portable","Écran(s)","Imprimante","Périphériques (souris, clavier...)"] },
-        { label: "Téléphonie à déménager", title: "Téléphonie à déménager", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label: "Action requise", options: ["Transfert du poste existant","Nouvelle ligne","Aucune action"]}, fields: [] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      depart: { title: "Départ d'un agent", ref: "DEP", icon: 'doorExit', steps: [
-        { label: "À propos de l'agent concerné", title: "À propos de l'agent concerné par le départ", desc: "Identité et date de départ", type: 'fields', fields: [{label: "Prénom", req: true}, {label: "Nom", req: true}, {label: "E-mail professionnel", req: true, type: 'email'}, {label: "Date de départ", req: true, type: 'date'}, {label: "Motif du départ"}] },
-        { label: "Mobilier à récupérer", title: "Mobilier à récupérer", desc: "Sélectionnez les éléments à reprendre", type: 'checklist', items: ["Bureau","Chaise","Caisson de rangement","Armoire"] },
-        { label: "Matériel informatique à récupérer", title: "Matériel informatique à récupérer", desc: "Équipements à restituer", type: 'checklist', items: ["Ordinateur portable / fixe","Écran(s)","Badge d'accès","Périphériques", "Téléphone mobile professionnel"] },
-        { label: "Matériel de téléphonie à récupérer", title: "Matériel de téléphonie à récupérer", desc: "Ligne et poste téléphonique", type: 'mixed', radio: {label: "Action sur la ligne", options: ["Clôture définitive","Réaffectation à un autre agent"]}, fields: [] },
-          {desc: "Pour rappel, les badges d'accès sont à restituer obligatoirement au service RH."}, 
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  },
-
-  'fournitures': {
-    title: 'Fournitures',
-    forms: {
-      signaletique: { title: "Signalétique de bureau", ref: "SIG", icon: 'tag', steps: [
-        { label: "Votre demande", title: "Signalétique de bureau", desc: "Décrivez votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Bureau concerné", req: true},{label: "Texte souhaité sur la plaque", req: true},{label: "Quantité"}] }
-      ]},
-      cartons: { title: "Cartons d'archives et d'élimination", ref: "CAE", icon: 'box', steps: [
-        { label: "Votre demande", title: "Cartons d'archives et d'élimination", desc: "Précisez votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Nombre de cartons", req: true},{label: "Type (archive / élimination)", req: true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      dossier_srh: { title: "Dossier spécifique SRH", ref: "SRH", icon: 'folder', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Nature du dossier demandé", req: true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      courantes: { title: "Fournitures courantes", ref: "FCO", icon: 'pencil', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Articles souhaités", req: true},{label: "Quantité"}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      sanitaires: { title: "Fournitures sanitaires", ref: "FSA", icon: 'droplet', steps: [
-        { label: "Identité du demandeur", title: "Fournitures sanitaires", desc: "Renseignez vos coordonnées et votre besoin", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Articles souhaités", req: true}] }
-      ]},
-      specifiques: { title: "Fournitures spécifiques", ref: "FSP", icon: 'stars', steps: [
-        { label: "Identité du demandeur", title: "Fournitures spécifiques", desc: "Décrivez votre besoin particulier", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] }
-      ]},
-      tampons: { title: "Tampons", ref: "TAM", icon: 'stamp', steps: [
-        { label: "Identité du demandeur", title: "Tampons", desc: "Renseignez le texte souhaité sur le tampon", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Texte du tampon", req: true},{label: "Quantité"}] }
-      ]}
-    }
-  },
-
-  'budget': {
-    title: 'Budget',
-    forms: {
-      proposition_depenses: { 
-        title: "PROPOSITION DE DÉPENSES", 
-        ref: "BUD", 
-        icon: 'files', 
-        steps: [
-          { 
-            label: "Identifiant du demandeur", 
-            title: "Identifiant du demandeur", 
-            desc: "Renseignez vos coordonnées", 
-            type: 'fields', 
-            fields: [
-              {label: "Nom", req: true, type: 'text'},
-              {label: "Prénom", req: true, type: 'text'},
-              {label: "Direction", req: true, type: 'text'}
-            ] 
-          },
-          { 
-            label: "Identifiant du fournisseur", 
-            title: "Identifiant du fournisseur", 
-            desc: "Renseignez les informations du fournisseur", 
-            type: 'fields', 
-            fields: [
-              {label: "Nom", req: true, type: 'text'},
-              {label: "Adresse", req: true, type: 'text'},
-              {label: "Mail du fournisseur", req: true, type: 'text'},
-              {label: "Si nouveau fournisseur, numéro de SIRET et RIB obligatoires", req: false, type: 'text'}
-            ] 
-          },
-          { 
-            label: "Nature de la commande", 
-            title: "Nature de la commande", 
-            desc: "Précisez les détails de la commande", 
-            type: 'mixed', 
-            radio: {label: "Type de commande", req: true, options: ["de l'acquisition","de la prestation"]}, 
-            fields: [
-              {label: "Titre de la commande", req: true, type: 'text'},
-              {label: "Justification", req: true, type: 'text'},
-              {label: "Si dépense dans le cadre d'un projet spécifique (européen, PNCR) préciser lequel", req: false, type: 'text'},
-              {label: "Montant de la commande", req: true, type: 'text'}
-            ] 
-          },
-          { 
-            label: "Rappel des procédures", 
-            title: "Rappel des procédures", 
-            desc: "Pour rappel, les procédures applicables à la commande publique sont les suivantes :", 
-            type: 'fixed', 
-            content: "<ul><li>Si dépense inférieure à 40 000 € HT : plusieurs devis souhaitables, publicité non obligatoire</li><li>Si dépense comprise entre 40 000€ HT et 90 000€ HT : établissement d'un cahier des charges pour un marché à procédure adaptée, publicité libre ou adaptée</li><li>Si dépense supérieure à 90 000 € HT et inférieure à 140 000 € HT : établissement d'un cahier des charges et publication au BOAMP ou dans un JAL</li><li>Si dépense supérieure à 140 000 HT : publication au BOAMP et au JOUE et recours obligatoire à la procédure formalisée des marchés publics</li></ul>"
-          },
-          { 
-            label: "Pièces jointes", 
-            title: "Pièces jointes", 
-            desc: "Chargez le devis et autres pièces jointes nécessaires (PDF, Word, JPG, RAW, TIFF - Max 5 Mo par fichier)", 
-            type: 'file-upload', 
-            allowed_formats: ['pdf', 'doc', 'docx', 'jpg', 'jpeg', 'raw', 'tiff', 'tif'],
-            max_file_size: 5242880,
-            max_files: 10,
-            required: false
-          },
-          { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-        ]
-      }
-    }
-  },
-
-  'menage': {
-    title: 'Ménage',
-    forms: {
-      menage_general: { title: "Ménage, désinfestation et déchets", ref: "MEN", icon: 'spray', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Site / bâtiment", req: true}] },
-        { label: "Votre demande", title: "Votre demande", desc: "Précisez la nature de l'intervention", type: 'mixed', radio: {label: "Type d'intervention", req: true, options: ["Ménage ponctuel","Désinfestation","Enlèvement de déchets"]}, fields: [{label: "Précisions complémentaires"}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  },
-
-  'intervention-technique': {
-    title: 'Intervention technique',
-    forms: {
-      ascenseur: { title: "Ascenseur", ref: "ASC", icon: 'stairs', steps: [
-        { label: "Votre demande", title: "Ascenseur", desc: "Décrivez le problème constaté", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Site / bâtiment", req: true},{label: "Description du problème", req: true, type: 'textarea'}] }
-      ]},
-      intervention: { title: "Demande d'intervention technique", ref: "ITE", icon: 'tool', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Site / bâtiment", req: true}] },
-        { label: "Votre demande", title: "Votre demande", desc: "Décrivez l'intervention nécessaire", type: 'mixed', radio: {label: "Domaine concerné", options: ["Électricité","Plomberie","Chauffage / climatisation","Autre"]}, fields: [{label: "Description du problème", req: true, type: 'textarea'}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  },
-
-  'acces-sites': {
-    title: 'Accès aux sites',
-    forms: {
-      acces_exceptionnel: { title: "Autorisation d'accès exceptionnel", ref: "AEX", icon: 'clock', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez la période concernée", type: 'fields', fields: [{label: "Date et heure d'arrivée", req: true},{label: "Date et heure de départ", req: true},{label: "Motif", req: true, type: 'textarea'}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      perte_badge: { title: "Déclaration de perte du badge", ref: "PBA", icon: 'badgeOff', steps: [
-        { label: "Identité du demandeur", title: "Déclaration de perte du badge", desc: "Renseignez vos coordonnées et les circonstances", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Date de la perte", req: true, type: 'date'},{label: "Circonstances"}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      cle_bureau: { title: "Clé de bureau", ref: "CLE", icon: 'key', steps: [
-        { label: "Votre demande", title: "Clé de bureau", desc: "Renseignez votre demande", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Numéro de bureau", req: true},{label: "Motif"}] }
-      ]},
-      acces_prestataire: { title: "Autorisation d'accès prestataire ou autre personne extérieure", ref: "APR", icon: 'userPlus', steps: [
-        { label: "Votre demande", title: "Votre demande", desc: "Décrivez le contexte de l'intervention", type: 'fields', fields: [{label: "Prénom du demandeur", req: true},{label: "Nom du demandeur", req: true},{label: "Date(s) d'intervention", req: true},{label: "Motif de l'accès", req: true}] },
-        { label: "Les intervenants", title: "Les intervenants", desc: "Identité des personnes externes concernées", type: 'fields', fields: [{label: "Nom complet intervenant 1", req: true},{label: "Société", req: true},{label: "Nom complet intervenant 2 (optionnel)"}] }
-      ]},
-      modif_droits: { title: "Modification des droits du badge", ref: "MDB", icon: 'shieldLock', steps: [
-        { label: "Agent concerné", title: "Agent concerné", desc: "Identifiez l'agent dont les droits doivent être modifiés", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Numéro de badge"}] },
-        { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez les zones d'accès concernées", type: 'fields', fields: [{label: "Zones à ajouter"},{label: "Zones à retirer"},{label: "Justification", req: true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  },
-
-  'livraison-envoi': {
-    title: 'Livraison, Envoi et Manutention',
-    forms: {
-      livraison: { title: "Livraison", ref: "LIV", icon: 'truckDelivery', steps: [
-        { label: "Identité du demandeur et sélection du type de livraison", title: "Livraison", desc: "Renseignez les détails de la livraison attendue", type: 'mixed', radio: {label: "Type de livraison", options: ["Colis","Palette","Courrier volumineux"]}, fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date prévue"}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      signaler_envoi: { title: "Signaler un envoi à la cellule courrier", ref: "SEC", icon: 'mailForward', steps: [
-        { label: "Identité du demandeur et sélection du type de livraison", title: "Signaler un envoi", desc: "Renseignez les détails de l'envoi", type: 'mixed', radio: {label: "Type d'envoi", options: ["Courrier standard","Recommandé","Colis"]}, fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Destinataire"}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      manutention: { title: "Manutention sur site", ref: "MAN", icon: 'forklift', steps: [
-        { label: "Identité du demandeur", title: "Manutention sur site", desc: "Décrivez le besoin de manutention", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      livraison_quai: { title: "Signaler une livraison ou un enlèvement au quai", ref: "LEQ", icon: 'truckLoading', steps: [
-        { label: "Identité du demandeur", title: "Signaler une livraison ou un enlèvement au quai", desc: "Renseignez les coordonnées et l'horaire", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date et heure prévues", req: true},{label: "Nature (livraison / enlèvement)", req: true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  },
-
-  'equipements-bureau': {
-    title: 'Équipements de bureau',
-    forms: {
-      mobilier_standard: { title: "Mobilier standard", ref: "MST", icon: 'armchair', steps: [
-        { label: "Identité du demandeur", title: "Mobilier standard", desc: "Renseignez vos coordonnées et le mobilier souhaité", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Mobilier souhaité", req: true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      equip_specifiques: { title: "Équipements spécifiques de bureau", ref: "ESB", icon: 'desk', steps: [
-        { label: "Identité du demandeur", title: "Équipements spécifiques de bureau", desc: "Décrivez le besoin particulier", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description du besoin", req: true, type: 'textarea'}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  },
-
-  'vehicule': {
-    title: 'Véhicule',
-    forms: {
-      reservation: { title: "Réservation de véhicule seul", ref: "VEH", icon: 'car', steps: [
-        { label: "Votre demande", title: "Réservation de véhicule seul", desc: "Renseignez les détails de votre réservation", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Date et heure de départ", req: true},{label: "Date et heure de retour", req: true},{label: "Motif du déplacement"}] }
-      ]}
-    }
-  },
-
-  'evenementiel': {
-    title: 'Événementiel',
-    forms: {
-      accueil_cafe: { title: "Accueil café, croissants", ref: "ACC", icon: 'coffee', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Lieu et date de l'événement", title: "Lieu et date de l'événement", desc: "Précisez les modalités", type: 'fields', fields: [{label: "Date", req: true, type: 'date'},{label: "Lieu", req: true},{label: "Nombre de personnes", req: true}] },
-        { label: "Bon de commande et facturation", title: "Bon de commande et facturation", desc: "Sélectionnez les articles souhaités", type: 'checklist', items: ["Café","Thé","Croissants / viennoiseries","Jus de fruits","Eau"] },
-        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label: "Code budgétaire / centre de coûts", req: true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      coupon_repas: { title: "Coupon repas", ref: "CRE", icon: 'ticket', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Commande", title: "Commande", desc: "Précisez le nombre de coupons", type: 'fields', fields: [{label: "Nombre de coupons", req: true},{label: "Date d'utilisation prévue"}] },
-        { label: "Facturation", title: "Facturation", desc: "Renseignez l'imputation budgétaire", type: 'fields', fields: [{label: "Code budgétaire / centre de coûts", req: true}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]},
-      materiel_evenementiel: { title: "Matériel d'événementiel et de réunion", ref: "MER", icon: 'presentation', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true}] },
-        { label: "Lieu et prestation", title: "Lieu et prestation", desc: "Précisez le matériel et le lieu", type: 'mixed', radio: {label: "Matériel souhaité", options: ["Vidéoprojecteur","Sonorisation","Mobilier de réunion","Visioconférence"]}, fields: [{label: "Lieu / salle", req: true},{label: "Date", req: true, type: 'date'}] },
-        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-      ]}
-    }
-  },
-
- // 'oeuvres-art': {
-  //  title: "Œuvres et objets d'art",
-   // forms: {
-    //  depot_oeuvres: { title: "Dépôt d'œuvres et objets d'art", ref: "OEA", icon: 'palette', steps: [
-     //   { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label: "Prénom", req: true},{label: "Nom", req: true},{label: "Service / direction", req: true},{label: "Description de l'œuvre", req: true, type: 'textarea'}] },
-      //  { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
-     // ]}
-   // }
- // }
-};
+// Les catégories et formulaires sont définis dans forms-data.js (global categoryForms).
 
 // -----------------------------------------------------------------------------
 // Fonctions utilitaires
@@ -386,12 +128,12 @@ function getDomain(email) {
 // Vérifier si le domaine est autorisé. Par défaut, le domaine attendu est
 // culture.gouv.fr, et il peut être surchargé depuis la configuration du front.
 function isAllowedDomain(email) {
-  const allowedDomains = (window.ALLOWED_EMAIL_DOMAIN || 'culture.gouv.fr')
+  const allowedDomains = ['culture.gouv.fr', ...(window.ALLOWED_EMAIL_DOMAIN || '')
     .split(',')
-    .map((d) => d.trim().toLowerCase())
-    .filter(Boolean);
+    .map((d) => d.trim().toLowerCase().replace(/^@/, '').replace(/\.$/, ''))
+    .filter(Boolean)];
 
-  return allowedDomains.includes(getDomain(email));
+  return [...new Set(allowedDomains)].includes(getDomain(email).replace(/\.$/, ''));
 }
 
 // Vérifier la force du mot de passe
@@ -442,10 +184,35 @@ function parseJsonResponse(response) {
     try {
       return JSON.parse(text);
     } catch (err) {
-      console.warn('Réponse non JSON ignorée: ', text.slice(0, 160));
+      console.warn('Réponse non JSON ignorée:', text.slice(0, 160));
       return {};
     }
   });
+}
+
+// Lecture stricte d'une réponse de l'API d'authentification. Si le corps n'est
+// pas du JSON, la page n'est pas servie par le serveur Node (ex. Apache/XAMPP
+// qui renvoie une page 404 HTML) : on le signale clairement à l'utilisateur
+// au lieu d'un faux "vérifiez votre connexion Internet".
+async function readApiJson(response) {
+  const text = await response.text();
+  try {
+    return JSON.parse(text);
+  } catch (err) {
+    const e = new Error('API_UNREACHABLE');
+    e.status = response.status;
+    throw e;
+  }
+}
+
+function describeApiError(err, fallback) {
+  if (err && err.message === 'API_UNREACHABLE') {
+    return "Le serveur Nestor-C2 ne répond pas à cette adresse. Ouvrez l'application via le serveur Node (par défaut http://localhost:3000) et non via un autre serveur web.";
+  }
+  if (err instanceof TypeError) {
+    return "Impossible de joindre le serveur Nestor-C2. Vérifiez qu'il est démarré (npm start) et que vous utilisez la bonne adresse.";
+  }
+  return fallback;
 }
 
 // Vérifier l'authentification au chargement
@@ -463,22 +230,358 @@ async function checkAuth() {
       showUnauthenticatedUI();
     }
   } catch (err) {
-    console.error('Erreur auth: ', err);
+    console.error('Erreur auth:', err);
     currentUser = null;
     showUnauthenticatedUI();
   }
+}
+
+// Libellés des rôles affichés dans l'en-tête
+const roleLabels = { agent: 'Agent', validator: 'Valideur', valideur: 'Valideur', admin: 'Administrateur', superAdmin: 'SuperAdmin' };
+
+// En-tête : identité de l'utilisateur connecté (nom si connu, sinon e-mail)
+function renderHeaderUser() {
+  const nameEl = document.getElementById('user-name');
+  const roleEl = document.getElementById('user-role');
+  if (!nameEl || !roleEl || !currentUser) return;
+  const fullName = [currentUser.firstName, currentUser.lastName].filter(Boolean).join(' ').trim();
+  nameEl.textContent = fullName || currentUser.email || '';
+  roleEl.textContent = roleLabels[currentUser.role] || '';
 }
 
 // Afficher l'UI connectée
 function showAuthenticatedUI() {
   document.getElementById('screen-connexion').style.display = 'none';
   document.getElementById('screen-accueil').style.display = 'block';
+  document.getElementById('app-header').style.display = 'block';
+  renderHeaderUser();
+  setAdminPanelVisibility();
 }
 
 // Afficher l'UI non connectée
 function showUnauthenticatedUI() {
   document.getElementById('screen-connexion').style.display = 'block';
   document.getElementById('screen-accueil').style.display = 'none';
+  document.getElementById('screen-categorie').style.display = 'none';
+  document.getElementById('app-header').style.display = 'none';
+  setAdminPanelVisibility(false);
+  selectTab('accueil'); // le prochain utilisateur repart toujours de l'accueil
+}
+
+// Le bouton "Administration" n'existe que pour un superAdmin ; la vue elle-même
+// ne s'affiche qu'au clic sur l'onglet (voir showAccueilTab).
+function setAdminPanelVisibility(forceVisible) {
+  const toggle = document.getElementById('admin-panel-toggle');
+  const panel = document.getElementById('admin-panel');
+  const isAdmin = !!(currentUser && currentUser.role === 'superAdmin');
+  const shouldShow = typeof forceVisible === 'boolean' ? forceVisible : isAdmin;
+
+  if (toggle) toggle.style.display = shouldShow ? 'inline-flex' : 'none';
+  if (!shouldShow) {
+    if (panel) panel.style.display = 'none';
+    if (toggle) toggle.classList.remove('active');
+  }
+
+  if (shouldShow && isAdmin) {
+    renderAdminUsers();
+    renderAdminRequests();
+  }
+}
+
+function escapeHtml(value) {
+  return String(value ?? '').replace(/[&<>'"]/g, character => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
+  })[character]);
+}
+
+async function renderAdminUsers() {
+  if (!currentUser || currentUser.role !== 'superAdmin') return;
+
+  try {
+    const response = await fetch('/api/admin/users');
+    const data = await parseJsonResponse(response);
+
+    const list = document.getElementById('admin-user-list');
+    if (!list) return;
+
+    if (!response.ok || !Array.isArray(data.users)) {
+      list.innerHTML = '<div class="admin-empty-state">Impossible de charger les comptes.</div>';
+      return;
+    }
+
+    if (data.users.length === 0) {
+      list.innerHTML = '<div class="admin-empty-state">Aucun compte enregistré.</div>';
+      return;
+    }
+
+    list.innerHTML = data.users.map(user => {
+      const roleKey = (user.role || 'agent').toLowerCase();
+      const roleClass = roleKey === 'validator' || roleKey === 'valideur' ? 'role-validator' : roleKey === 'admin' ? 'role-admin' : roleKey === 'superadmin' ? 'role-superadmin' : 'role-agent';
+      const roleText = roleKey === 'validator' || roleKey === 'valideur' ? 'Valideur' : roleKey === 'admin' ? 'Admin' : roleKey === 'superadmin' ? 'SuperAdmin' : 'Agent';
+      const statusKey = (user.status || 'active').toLowerCase();
+      const statusClass = statusKey === 'expired' ? 'status-expired' : statusKey === 'pending' ? 'status-pending' : 'status-active';
+      const isExpired = !!user.is_expired;
+      const canDelete = isExpired || (user.status === 'pending' && user.created_at && new Date(user.created_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+
+      return `
+        <div class="admin-user-item">
+          <div class="admin-user-header">
+            <div>
+              <div class="admin-user-name">${escapeHtml((user.first_name || '').trim() || '-')} ${escapeHtml((user.last_name || '').trim() || '')}</div>
+              <div class="admin-user-email">${escapeHtml(user.email)}</div>
+            </div>
+            ${canDelete ? `<button class="admin-delete-btn" type="button" data-onclick="deleteAdminUser(${user.id})">Supprimer</button>` : ''}
+          </div>
+          <div class="admin-user-meta">
+            <span class="admin-badge ${roleClass}">${roleText}</span>
+            <span class="admin-badge ${statusClass}">${statusKey === 'expired' ? 'Expiré' : statusKey === 'pending' ? 'En attente' : 'Actif'}</span>
+            ${isExpired ? '<span class="admin-badge status-expired">Expiré</span>' : ''}
+          </div>
+          <div class="admin-user-edit">
+            <input type="text" id="admin-edit-firstname-${user.id}" value="${escapeHtml(user.first_name)}" aria-label="Prénom">
+            <input type="text" id="admin-edit-lastname-${user.id}" value="${escapeHtml(user.last_name)}" aria-label="Nom">
+            <input type="email" id="admin-edit-email-${user.id}" value="${escapeHtml(user.email)}" aria-label="E-mail">
+            <select id="admin-edit-role-${user.id}" aria-label="Rôle">
+              <option value="agent" ${roleKey === 'agent' ? 'selected' : ''}>Agent</option>
+              <option value="validator" ${roleKey === 'validator' || roleKey === 'valideur' ? 'selected' : ''}>Valideur</option>
+              <option value="admin" ${roleKey === 'admin' ? 'selected' : ''}>Administrateur</option>
+              <option value="superAdmin" ${roleKey === 'superadmin' ? 'selected' : ''}>SuperAdmin</option>
+            </select>
+            <select id="admin-edit-status-${user.id}" aria-label="Statut">
+              <option value="active" ${statusKey === 'active' ? 'selected' : ''}>Actif</option>
+              <option value="pending" ${statusKey === 'pending' ? 'selected' : ''}>En attente</option>
+              <option value="expired" ${statusKey === 'expired' ? 'selected' : ''}>Expiré</option>
+            </select>
+            <button class="admin-save-btn" type="button" data-onclick="saveAdminUser(${user.id})">Enregistrer les modifications</button>
+          </div>
+        </div>
+      `;
+    }).join('');
+  } catch (err) {
+    console.error('[admin/users] Erreur de chargement :', err);
+    const list = document.getElementById('admin-user-list');
+    if (list) {
+      list.innerHTML = '<div class="admin-empty-state">Impossible de charger les comptes.</div>';
+    }
+  }
+}
+
+async function saveAdminUser(userId) {
+  const payload = {
+    firstName: document.getElementById(`admin-edit-firstname-${userId}`).value.trim(),
+    lastName: document.getElementById(`admin-edit-lastname-${userId}`).value.trim(),
+    email: document.getElementById(`admin-edit-email-${userId}`).value.trim(),
+    role: document.getElementById(`admin-edit-role-${userId}`).value,
+    status: document.getElementById(`admin-edit-status-${userId}`).value,
+  };
+
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload),
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || 'Modification impossible.');
+      return;
+    }
+    await renderAdminUsers();
+    alert(data.message || 'Compte modifié.');
+  } catch (err) {
+    console.error('[admin/update-user] Erreur :', err);
+    alert('Erreur lors de la modification du compte.');
+  }
+}
+
+async function renderAdminRequests() {
+  if (!currentUser || currentUser.role !== 'superAdmin') return;
+
+  const list = document.getElementById('admin-request-list');
+  if (!list) return;
+
+  try {
+    const response = await fetch('/api/admin/requests');
+    const data = await parseJsonResponse(response);
+    if (!response.ok || !Array.isArray(data.requests)) {
+      list.innerHTML = '<div class="admin-empty-state">Impossible de charger les demandes.</div>';
+      return;
+    }
+
+    const filter = document.getElementById('admin-request-status-filter')?.value || 'all';
+    const requests = data.requests.filter(request => filter === 'all' || request.status === filter);
+    if (requests.length === 0) {
+      list.innerHTML = '<div class="admin-empty-state">Aucune demande pour ce filtre.</div>';
+      return;
+    }
+
+    // État de l'e-mail de notification : seuls les cas à traiter sont signalés
+    const mailLabels = {
+      pending: "E-mail en attente d'envoi",
+      failed: "Échec de l'envoi de l'e-mail",
+      not_configured: 'Aucun destinataire configuré',
+      smtp_disabled: 'Envoi d\'e-mails non configuré',
+    };
+
+    list.innerHTML = requests.map(request => {
+      const mailIssue = request.notification_status && request.notification_status !== 'sent';
+      return `
+      <div class="admin-request-item">
+        <div>
+          <div class="admin-request-title">${escapeHtml(request.title)}</div>
+          <div class="admin-request-meta">${escapeHtml(request.reference || '-')} · ${escapeHtml(request.user_email || '-')} · ${request.created_at ? new Date(request.created_at).toLocaleDateString('fr-FR') : '-'}</div>
+          ${mailIssue ? `<div class="admin-user-meta"><span class="admin-badge mail-warn">${escapeHtml(mailLabels[request.notification_status] || request.notification_status)}</span></div>` : ''}
+        </div>
+        <div class="admin-request-controls">
+          ${mailIssue ? `<button class="admin-save-btn" type="button" data-onclick="resendNotification(${Number(request.id)})">Renvoyer l'e-mail</button>` : ''}
+          <select class="admin-request-status" id="admin-request-status-${request.id}" aria-label="Statut de la demande">
+            <option value="en_cours" ${request.status === 'en_cours' ? 'selected' : ''}>En cours</option>
+            <option value="traitee" ${request.status === 'traitee' ? 'selected' : ''}>Traitée</option>
+            <option value="rejetee" ${request.status === 'rejetee' ? 'selected' : ''}>Rejetée</option>
+            <option value="annulee" ${request.status === 'annulee' ? 'selected' : ''}>Annulée</option>
+          </select>
+          <button class="admin-save-btn" type="button" data-onclick="saveAdminRequest(${request.id})">Enregistrer</button>
+        </div>
+      </div>
+    `;
+    }).join('');
+  } catch (err) {
+    console.error('[admin/requests] Erreur :', err);
+    list.innerHTML = '<div class="admin-empty-state">Impossible de charger les demandes.</div>';
+  }
+}
+
+async function saveAdminRequest(requestId) {
+  const status = document.getElementById(`admin-request-status-${requestId}`).value;
+  try {
+    const response = await fetch(`/api/admin/requests/${requestId}`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || 'Modification impossible.');
+      return;
+    }
+    await renderAdminRequests();
+  } catch (err) {
+    console.error('[admin/update-request] Erreur :', err);
+    alert('Erreur lors de la modification de la demande.');
+  }
+}
+
+// Renvoie l'e-mail de notification d'une demande (adresse configurée après coup,
+// incident SMTP passager…)
+async function resendNotification(requestId) {
+  try {
+    const response = await fetch(`/api/admin/requests/${requestId}/resend-notification`, { method: 'POST' });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || "Renvoi impossible.");
+      return;
+    }
+    const messages = {
+      sent: "L'e-mail a été envoyé.",
+      not_configured: "Aucun destinataire n'est encore configuré pour ce formulaire (voir les variables MAIL_* du fichier .env).",
+      smtp_disabled: "L'envoi d'e-mails n'est pas configuré sur le serveur (variables SMTP_*).",
+      failed: `L'envoi a échoué : ${data.error || 'erreur du serveur de messagerie'}`,
+    };
+    alert(messages[data.notification] || 'Renvoi effectué.');
+    await renderAdminRequests();
+  } catch (err) {
+    console.error('[admin/resend-notification] Erreur :', err);
+    alert("Erreur lors du renvoi de l'e-mail.");
+  }
+}
+
+function showAdminSection(section) {
+  if (!currentUser || currentUser.role !== 'superAdmin') return;
+  const usersSection = document.getElementById('admin-users-section');
+  const requestsSection = document.getElementById('admin-requests-section');
+  const usersTab = document.getElementById('admin-section-users-tab');
+  const requestsTab = document.getElementById('admin-section-requests-tab');
+  const showUsers = section === 'users';
+
+  usersSection.style.display = showUsers ? 'grid' : 'none';
+  requestsSection.style.display = showUsers ? 'none' : 'block';
+  usersTab.classList.toggle('active', showUsers);
+  requestsTab.classList.toggle('active', !showUsers);
+  if (!showUsers) renderAdminRequests();
+}
+
+function refreshAdminData() {
+  if (!currentUser || currentUser.role !== 'superAdmin') return;
+  renderAdminUsers();
+  renderAdminRequests();
+}
+
+async function deleteAdminUser(userId) {
+  if (!userId) return;
+
+  const confirmed = window.confirm('Supprimer ce compte expiré ?');
+  if (!confirmed) return;
+
+  try {
+    const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    const data = await parseJsonResponse(response);
+
+    if (!response.ok) {
+      alert(data.error || 'Suppression impossible.');
+      return;
+    }
+
+    await renderAdminUsers();
+    alert(data.message || 'Compte supprimé.');
+  } catch (err) {
+    console.error('[admin/delete-user] Erreur :', err);
+    alert('Erreur lors de la suppression.');
+  }
+}
+
+function toggleAdminPanel() {
+  const panel = document.getElementById('admin-panel');
+  if (!panel) return;
+  panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+}
+
+function bindAdminForm() {
+  const form = document.getElementById('admin-create-user-form');
+  if (!form) return;
+
+  form.addEventListener('submit', async (event) => {
+    event.preventDefault();
+
+    const payload = {
+      firstName: document.getElementById('admin-firstname').value.trim(),
+      lastName: document.getElementById('admin-lastname').value.trim(),
+      email: document.getElementById('admin-email').value.trim(),
+      password: document.getElementById('admin-password').value,
+      role: document.getElementById('admin-role').value,
+    };
+
+    try {
+      const response = await fetch('/api/admin/users', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(payload),
+      });
+
+      const data = await parseJsonResponse(response);
+
+      if (!response.ok) {
+        alert(data.error || 'Erreur lors de la création du compte.');
+        return;
+      }
+
+      form.reset();
+      await renderAdminUsers();
+      alert(data.message || 'Compte créé avec succès.');
+    } catch (err) {
+      console.error('[admin/create-user] Erreur réseau :', err);
+      alert('Erreur réseau lors de la création du compte.');
+    }
+  });
 }
 
 function updateUIForAuthState() {
@@ -490,29 +593,39 @@ function updateUIForAuthState() {
   }
 }
 
-// Bypass authentification (TEMPORAIRE - phase de test, à retirer avant mise en prod)
-async function bypassAuth() {
+// Mode test : le serveur indique s'il autorise le bouton « TEST » (ALLOW_TEST_BYPASS).
+// Sans réponse positive, le bouton reste caché.
+async function loadAuthConfig() {
+  const box = document.getElementById('bypass-box');
+  if (!box) return;
   try {
-    const response = await fetch('/api/auth/bypass', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      credentials: 'include', // ⭐ Important pour envoyer les cookies
-    });
+    const response = await fetch('/api/auth/config');
+    const data = await readApiJson(response);
+    box.style.display = response.ok && data.testBypass === true ? 'flex' : 'none';
+  } catch (err) {
+    box.style.display = 'none';
+  }
+}
 
+// Connexion de test sans mot de passe (bouton « TEST »)
+async function bypassAuth() {
+  const button = document.getElementById('bypass-btn');
+  if (button) button.disabled = true;
+  try {
+    const response = await fetch('/api/auth/bypass', { method: 'POST' });
+    const data = await readApiJson(response);
     if (!response.ok) {
-      const error = await response.json();
-      console.error('[bypassAuth] Erreur :', error);
-      alert(error.error || "Impossible d'activer le bypass.");
+      alert(data.error || "Impossible d'ouvrir la session de test.");
       return;
     }
-
-    const { user } = await response.json();
-    currentUser = user;
-    updateUIForAuthState();
-    alert("Bypass activé ! Vous êtes connecté en mode test.");
+    currentUser = data.user;
+    showAuthenticatedUI();
+    renderSuiviLists();
   } catch (err) {
-    console.error('[bypassAuth] Erreur réseau :', err);
-    alert("Erreur réseau. Vérifiez que le serveur est en ligne.");
+    console.error('Erreur:', err);
+    alert(describeApiError(err, "Impossible d'ouvrir la session de test."));
+  } finally {
+    if (button) button.disabled = false;
   }
 }
 
@@ -527,7 +640,12 @@ async function trySubmitLogin() {
   if (!email || !isValidEmailFormat(email)) {
     errEmail.style.display = 'block';
     ok = false;
+  } else if (!isAllowedDomain(email)) {
+    errEmail.textContent = 'Utilisez une adresse e-mail @culture.gouv.fr.';
+    errEmail.style.display = 'block';
+    ok = false;
   } else {
+    errEmail.textContent = 'Veuillez saisir une adresse e-mail valide.';
     errEmail.style.display = 'none';
   }
   if (!pass) {
@@ -546,18 +664,19 @@ async function trySubmitLogin() {
       body: JSON.stringify({ email, password: pass }),
     });
     
-    const data = await response.json();
-    
+    const data = await readApiJson(response);
+
     if (response.ok) {
       currentUser = data.user;
       showAuthenticatedUI();
       renderSuiviLists();
+      setAdminPanelVisibility();
     } else {
       alert(data.error || 'Erreur de connexion.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
-    alert('Erreur de connexion. Vérifiez votre connexion Internet.');
+    console.error('Erreur:', err);
+    alert(describeApiError(err, 'Erreur de connexion.'));
   }
 }
 
@@ -579,16 +698,16 @@ async function trySubmitForgot() {
       body: JSON.stringify({ email }),
     });
     
-    const data = await response.json();
-    
+    const data = await readApiJson(response);
+
     if (response.ok) {
       showLoginView('forgot-success');
     } else {
       alert(data.error || 'Erreur.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
-    alert('Erreur. Vérifiez votre connexion Internet.');
+    console.error('Erreur:', err);
+    alert(describeApiError(err, 'Erreur.'));
   }
 }
 
@@ -633,16 +752,16 @@ async function trySubmitSignup() {
       body: JSON.stringify({ firstName: firstname, lastName: lastname, email, password: pass }),
     });
     
-    const data = await response.json();
-    
+    const data = await readApiJson(response);
+
     if (response.ok) {
       showLoginView('verify');
     } else {
       alert(data.error || 'Erreur lors de l\'inscription.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
-    alert('Erreur lors de l\'inscription. Vérifiez votre connexion Internet.');
+    console.error('Erreur:', err);
+    alert(describeApiError(err, 'Erreur lors de l\'inscription.'));
   }
 }
 
@@ -650,11 +769,21 @@ async function trySubmitSignup() {
 async function logout() {
   try {
     await fetch('/api/auth/logout', { method: 'POST' });
-    currentUser = null;
-    showUnauthenticatedUI();
   } catch (err) {
-    console.error('Erreur: ', err);
+    console.error('Erreur:', err);
   }
+  // Quoi qu'il arrive côté réseau, on referme la session dans l'interface
+  // et on efface toute donnée de l'utilisateur précédent.
+  currentUser = null;
+  currentCategoryKey = null;
+  currentFormKey = null;
+  formData = {};
+  uploadedFiles = {};
+  submittedRequests = [];
+  const pass = document.getElementById('login-pass');
+  if (pass) pass.value = '';
+  showLoginView('login');
+  showUnauthenticatedUI();
 }
 
 // -----------------------------------------------------------------------------
@@ -666,17 +795,36 @@ function openForm(formKey) {
   currentFormKey = formKey;
   currentStep = 1;
   formData = {};
-  
+  uploadedFiles = {};
+
   document.getElementById('menu-view').style.display = 'none';
   document.getElementById('wizard-view').style.display = 'block';
-  
+
   const cat = categoryForms[currentCategoryKey];
-  document.getElementById('hero-title').textContent = cat.forms[formKey].title;
+  const form = cat.forms[formKey];
+  document.getElementById('hero-title').textContent = form.title;
   document.getElementById('hero-sub').textContent = cat.title + ' · Formulaire de demande';
-  document.getElementById('hero-back').style.display = 'flex';
-  
+  setHeroBack("Retour aux formulaires");
+
+  // Message d'avertissement en haut du formulaire (propriété `notice`)
+  const notice = document.getElementById('wz-notice');
+  notice.textContent = form.notice || '';
+  notice.style.display = form.notice ? 'block' : 'none';
+
   renderSteps();
   showStep(1);
+}
+
+// Bouton "retour" de l'en-tête : son libellé et son action dépendent de la vue
+function setHeroBack(label) {
+  document.getElementById('hero-back').style.display = 'flex';
+  document.getElementById('hero-back-label').textContent = label;
+}
+
+function heroBack() {
+  const wizardOpen = document.getElementById('wizard-view').style.display !== 'none';
+  if (wizardOpen) backToMenu();
+  else backToAccueil();
 }
 
 // Retour au menu
@@ -686,7 +834,7 @@ function backToMenu() {
   const cat = categoryForms[currentCategoryKey];
   document.getElementById('hero-title').textContent = cat ? cat.title : 'Catégorie';
   document.getElementById('hero-sub').textContent = 'Choisissez le formulaire correspondant à votre demande';
-  document.getElementById('hero-back').style.display = 'none';
+  setHeroBack("Retour à l'accueil");
   renderCategoryMenu();
   currentFormKey = null;
 }
@@ -704,7 +852,8 @@ function openCategoryScreen(catKey, formKey) {
   currentCategoryKey = catKey;
   const cat = categoryForms[catKey];
   document.getElementById('hero-title').textContent = cat.title;
-  
+  showScreen('categorie');
+
   if (formKey) {
     openForm(formKey);
   } else {
@@ -718,45 +867,35 @@ function getCurrentForm() {
   return categoryForms[currentCategoryKey].forms[currentFormKey];
 }
 
-// Gestion du téléchargement de fichiers
-document.getElementById('file-upload').addEventListener('change', function(e) {
-  const fileList = document.getElementById('file-list');
-  fileList.innerHTML = ''; // Réinitialiser la liste
-
-  const files = e.target.files;
-  if (files.length === 0) return;
-
-  for (let i = 0; i < files.length; i++) {
-    const file = files[i];
-    const fileItem = document.createElement('div');
-    fileItem.className = 'file-item';
-    fileItem.textContent = `${file.name} (${(file.size / 1024 / 1024).toFixed(2)} Mo)`;
-    fileList.appendChild(fileItem);
-  }
-});
-
 // Soumettre un formulaire
 async function submitForm() {
+  if (submittingForm) return; // évite les envois en double (double-clic)
   const form = getCurrentForm();
-  
-  // Préparer les données
+
+  // Préparer les données (le serveur reprend le titre depuis la définition)
   const requestData = {
     categoryKey: currentCategoryKey,
     formKey: currentFormKey,
-    title: form.title,
     data: formData,
   };
-  
+
+  submittingForm = true;
+  const nextBtn = document.getElementById('btn-next');
+  nextBtn.disabled = true;
+  nextBtn.textContent = 'Envoi en cours…';
+
   try {
     const response = await fetch('/api/requests', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(requestData),
     });
-    
-    const data = await response.json();
-    
+
+    const data = await readApiJson(response);
+
     if (response.ok) {
+      uploadedFiles = {};
+      const mailOk = data.notification === 'sent';
       // Ajouter à la liste locale
       submittedRequests.unshift({
         id: data.request.id,
@@ -772,70 +911,35 @@ async function submitForm() {
         <div class="wz-success">
           <div class="wz-success-icon">${icon('check')}</div>
           <div class="wz-success-title">Demande envoyée</div>
-          <div class="wz-success-text">Votre demande « ${form.title} » a été transmise.</div>
-          <div class="wz-success-ref">Référence : <strong>${data.request.reference}</strong></div>
-          <button class="wz-btn-primary" style="margin-top: 18px;" onclick="backToAccueil()">Retour à l'accueil</button>
+          <div class="wz-success-text">Votre demande « ${escapeHtml(form.title)} » a été transmise.</div>
+          ${mailOk ? '' : '<div class="wz-hint">Votre demande est bien enregistrée, mais la notification par e-mail n\'a pas pu être envoyée immédiatement : elle sera retransmise par l\'administration.</div>'}
+          <div class="wz-success-ref">Référence : <strong>${escapeHtml(data.request.reference)}</strong></div>
+          <button type="button" class="wz-btn-primary" data-onclick="backToAccueil()">Retour à l'accueil</button>
         </div>
       `;
       document.getElementById('wz-footer').style.display = 'none';
       renderSuiviLists();
     } else {
-      alert(data.error || 'Erreur lors de l\'envoi.');
+      showStepError(data.error || 'Erreur lors de l\'envoi.');
     }
   } catch (err) {
-    console.error('Erreur: ', err);
-    alert('Erreur de connexion.');
-  }
-}
-// Fonction pour soumettre une demande
-async function submitRequest() {
-  const formData = {
-    // Récupérer les données du formulaire
-    ref: document.getElementById('request-ref').value,
-    title: document.getElementById('request-title').value,
-    // Ajouter d'autres champs ici
-  };
-
-  const fileInput = document.getElementById('file-upload');
-  const files = fileInput.files;
-
-  if (files.length === 0) {
-    alert('Veuillez sélectionner au moins un fichier.');
-    return;
-  }
-
-  // Créer un objet FormData pour envoyer les fichiers
-  const data = new FormData();
-  data.append('formData', JSON.stringify(formData));
-  data.append('email', currentUser.email);
-  data.append('firstName', currentUser.firstName);
-
-  // Ajouter les fichiers
-  for (let i = 0; i < files.length; i++) {
-    data.append('files', files[i]);
-  }
-
-  try {
-    const response = await fetch('/api/requests/submit-request', {
-      method: 'POST',
-      body: data
-    });
-
-    const result = await response.json();
-    if (result.success) {
-      alert('Demande soumise avec succès !');
-    } else {
-      alert('Erreur : ' + result.error);
+    console.error('Erreur:', err);
+    showStepError(describeApiError(err, 'Erreur de connexion.'));
+  } finally {
+    submittingForm = false;
+    // Toujours réactiver le bouton (il serait sinon bloqué pour le formulaire
+    // suivant) ; le libellé n'est remis que si le formulaire est encore affiché.
+    nextBtn.disabled = false;
+    if (document.getElementById('wz-footer').style.display !== 'none') {
+      nextBtn.textContent = 'Envoyer la demande';
     }
-  } catch (err) {
-    console.error('Erreur lors de la soumission :', err);
-    alert('Une erreur est survenue.');
   }
 }
+
 // Charger les demandes
 async function renderSuiviLists() {
   if (!currentUser) {
-    submittedRequests = Array.isArray(sampleRequests) ? sampleRequests : [];
+    submittedRequests = [];
   } else {
     try {
       const response = await fetch('/api/requests');
@@ -851,11 +955,11 @@ async function renderSuiviLists() {
           status: r.status,
         }));
       } else {
-        submittedRequests = Array.isArray(sampleRequests) ? sampleRequests : [];
+        submittedRequests = [];
       }
     } catch (err) {
-      console.error('Erreur: ', err);
-      submittedRequests = Array.isArray(sampleRequests) ? sampleRequests : [];
+      console.error('Erreur:', err);
+      submittedRequests = [];
     }
   }
 
@@ -864,8 +968,8 @@ async function renderSuiviLists() {
   const termineesList = document.getElementById('suivi-terminees-list');
   const termineesEmpty = document.getElementById('suivi-terminees-empty');
   
-  const enCours = submittedRequests.filter(r => r.status === 'brouillon' || r.status === 'en_cours');
-  const terminees = submittedRequests.filter(r => r.status === 'traitee' || r.status === 'annulee' || r.status === 'rejetee');
+  const enCours = submittedRequests.filter(r => r.status === 'brouillon' || r.status === 'en_cours' || r.status === 'en_attente_validation' || r.status === 'validee_responsable');
+  const terminees = submittedRequests.filter(r => r.status === 'transmise_budget' || r.status === 'traitee' || r.status === 'annulee' || r.status === 'rejetee');
   
   enCoursList.innerHTML = enCours.map(renderSuiviCard).join('');
   enCoursEmpty.style.display = enCours.length === 0 ? 'block' : 'none';
@@ -875,20 +979,110 @@ async function renderSuiviLists() {
 }
 
 // Rendre une carte de suivi
+function categoryTitle(key) {
+  return (categoryForms[key] && categoryForms[key].title) || key || '';
+}
+
 function renderSuiviCard(r) {
-  const st = statusLabels[r.status];
-  const isDraft = r.status === 'brouillon';
+  const st = statusLabels[r.status] || { label: r.status || 'Inconnu', cls: 'status-brouillon' };
+  const id = Number(r.id);
   return `<div class="suivi-card">
-    <div class="suivi-card-icon">${icon(isDraft ? 'filePencil' : 'fileText')}</div>
+    <div class="suivi-card-icon">${icon('fileText')}</div>
     <div class="suivi-card-main">
-      <div class="suivi-card-title">${r.title}</div>
-      <div class="suivi-card-meta">${r.category} · Réf. ${r.ref} · ${r.date}</div>
+      <div class="suivi-card-title">${escapeHtml(r.title)}</div>
+      <div class="suivi-card-meta">${escapeHtml(categoryTitle(r.category))} · Réf. ${escapeHtml(r.ref)} · ${escapeHtml(r.date)}</div>
     </div>
     <div class="suivi-card-right">
-      <span class="suivi-status ${st.cls}">${st.label}</span>
-      ${isDraft ? `<button class="suivi-card-action" onclick="alert('Reprendre le brouillon ${r.ref}')">Reprendre</button>` : `<button class="suivi-card-action" onclick="alert('Détail de la demande ${r.ref}')">Détail</button>`}
+      <span class="suivi-status ${st.cls}">${escapeHtml(st.label)}</span>
+      <button type="button" class="suivi-card-action" data-onclick="showRequestDetail(${id})">Détail</button>
     </div>
   </div>`;
+}
+
+// Mise en forme lisible des données d'une demande (même logique que le serveur) :
+// [{ title, rows: [{ label, value }] }], étapes inactives exclues.
+function describeRequestData(form, data) {
+  const isActive = (cond) => {
+    if (!cond) return true;
+    const expected = Array.isArray(cond.radio) ? cond.radio : [cond.radio];
+    return expected.includes(data[cond.step + '-radio']);
+  };
+  const sections = [];
+  form.steps.forEach((step, i) => {
+    const index = i + 1;
+    if (!isActive(step.when)) return;
+    const rows = [];
+    if (step.type === 'fields' || step.type === 'mixed') {
+      if (step.radio) rows.push({ label: step.radio.label, value: data[index + '-radio'] || '—' });
+      (step.fields || []).forEach((field, fi) => {
+        if (!isActive(field.when)) return;
+        rows.push({ label: field.label, value: data[`${index}-field-${fi}`] || '—' });
+      });
+    } else if (step.type === 'checklist') {
+      const picked = data[index + '-checklist'] || [];
+      rows.push({ label: step.label || step.title, value: picked.length ? picked.join(', ') : 'Aucun' });
+    } else if (step.type === 'file-upload') {
+      const files = data[index + '-files'] || [];
+      rows.push({ label: step.label || step.title, files });
+    } else {
+      return;
+    }
+    if (rows.length) sections.push({ title: step.title || step.label, rows });
+  });
+  return sections;
+}
+
+function renderRequestSections(form, data) {
+  return describeRequestData(form, data || {}).map((section) => `
+    <div class="wz-summary-section">
+      <div class="wz-summary-title">${escapeHtml(section.title)}</div>
+      ${section.rows.map((row) => {
+        const value = row.files
+          ? (row.files.length
+              ? row.files.map((f) => `<a href="/api/attachments/${encodeURIComponent(f.id)}" download>${escapeHtml(f.name)}</a> (${formatFileSize(Number(f.size) || 0)})`).join('<br>')
+              : 'Aucun fichier')
+          : escapeHtml(row.value);
+        return `<div class="wz-summary-row"><span class="wz-summary-key">${escapeHtml(row.label)}</span><span class="wz-summary-val">${value}</span></div>`;
+      }).join('')}
+    </div>`).join('');
+}
+
+// Fenêtre de détail d'une demande
+async function showRequestDetail(id) {
+  const dialog = document.getElementById('detail-dialog');
+  const title = document.getElementById('detail-title');
+  const meta = document.getElementById('detail-meta');
+  const body = document.getElementById('detail-body');
+  title.textContent = 'Chargement…';
+  meta.textContent = '';
+  body.innerHTML = '';
+  if (!dialog.open) dialog.showModal();
+
+  try {
+    const response = await fetch('/api/requests/' + encodeURIComponent(id));
+    const data = await readApiJson(response);
+    if (!response.ok) throw new Error(data.error || 'Demande introuvable.');
+
+    const r = data.request;
+    const st = statusLabels[r.status] || { label: r.status };
+    const form = categoryForms[r.category_key] && categoryForms[r.category_key].forms[r.form_key];
+    title.textContent = r.title;
+    meta.textContent = `${categoryTitle(r.category_key)} · Réf. ${r.reference} · ${new Date(r.created_at).toLocaleDateString('fr-FR')} · ${st.label}`;
+    body.innerHTML = form
+      ? renderRequestSections(form, r.data)
+      : '<p class="wz-hint">Le contenu de cette demande ne peut pas être affiché (formulaire retiré).</p>';
+    if (r.status === 'rejetee' && r.rejected_reason) {
+      body.insertAdjacentHTML('afterbegin', `<div class="wz-error">Motif du rejet : ${escapeHtml(r.rejected_reason)}</div>`);
+    }
+  } catch (err) {
+    title.textContent = 'Détail indisponible';
+    body.innerHTML = `<div class="wz-error">${escapeHtml(describeApiError(err, err.message))}</div>`;
+  }
+}
+
+function closeRequestDetail() {
+  const dialog = document.getElementById('detail-dialog');
+  if (dialog && dialog.open) dialog.close();
 }
 
 // -----------------------------------------------------------------------------
@@ -921,21 +1115,26 @@ function renderCategories(filterText) {
     const isOpen = q && matchingKeys.length > 0;
     
     html += `<div class="cat-card ${isOpen ? 'open' : ''}" id="cat-${meta.key}">
-      <div class="cat-header" onclick="toggleCat('${meta.key}')">
+      <div class="cat-header" role="button" tabindex="0" aria-expanded="${isOpen ? 'true' : 'false'}" aria-controls="cat-body-${meta.key}" data-onclick="toggleCat('${meta.key}')">
         <div class="cat-header-left">
-          <div class="cat-icon" style="background: ${meta.bg};color: ${meta.fg};">${icon(meta.icon)}</div>
-          <div class="cat-name">${cat.title}</div>
+          <div class="cat-icon">${icon(meta.icon)}</div>
+          <div class="cat-info">
+            <div class="cat-name">${cat.title}</div>
+            <div class="cat-count">${allFormKeys.length} formulaire${allFormKeys.length > 1 ? 's' : ''}</div>
+          </div>
         </div>
         <span class="svg-icon chevron">${icon('chevronDown')}</span>
       </div>
-      <div class="cat-body">
+      <div class="cat-body" id="cat-body-${meta.key}">
+        <div class="cat-body-inner">
         ${matchingKeys.map(k => {
           const f = cat.forms[k];
-          return `<div class="form-item" onclick="event.stopPropagation(); handleFormClick('${meta.key}', '${k}')">
+          return `<div class="form-item" role="button" tabindex="0" data-onclick="handleFormClick('${meta.key}', '${k}')">
             <span>${f.title}</span>
-            <span class="form-item-steps">${f.steps.length} étape${f.steps.length > 1 ? 's' : ''}</span>
+            <span class="form-item-steps">${stepCountLabel(f)}</span>
           </div>`;
         }).join('')}
+        </div>
       </div>
     </div>`;
   });
@@ -947,7 +1146,14 @@ function renderCategories(filterText) {
 
 // Basculer une catégorie
 function toggleCat(key) {
-  document.getElementById('cat-' + key).classList.toggle('open');
+  // Une seule catégorie ouverte à la fois : ouvrir l'une ferme les autres.
+  const card = document.getElementById('cat-' + key);
+  const willOpen = !card.classList.contains('open');
+  document.querySelectorAll('.cat-card.open').forEach((c) => c.classList.remove('open'));
+  if (willOpen) card.classList.add('open');
+  document.querySelectorAll('.cat-card .cat-header').forEach((h) => {
+    h.setAttribute('aria-expanded', h.parentElement.classList.contains('open') ? 'true' : 'false');
+  });
 }
 
 // Filtrer les catégories
@@ -962,11 +1168,33 @@ function filterCategoriesReal() {
 
 // Gérer le clic sur un formulaire
 function handleFormClick(catKey, formKey) {
-  if (categoryForms[catKey] && categoryForms[catKey].forms[formKey]) {
-    openCategoryScreen(catKey, formKey);
-  } else {
+  const form = categoryForms[catKey] && categoryForms[catKey].forms[formKey];
+  if (!form) {
     alert('Ce formulaire n\'est pas encore construit.');
+  } else if (form.externalUrl) {
+    openExternalForm(form);
+  } else {
+    openCategoryScreen(catKey, formKey);
   }
+}
+
+// Formulaire qui renvoie vers un service externe (ex. Proxyclick) : nouvel onglet
+function openExternalForm(form) {
+  window.open(form.externalUrl, '_blank', 'noopener,noreferrer');
+}
+
+// Clic dans le menu d'une catégorie (même règle qu'au clic depuis l'accueil)
+function openMenuForm(formKey) {
+  handleFormClick(currentCategoryKey, formKey);
+}
+
+// "3 étapes", "1 étape" ou "Lien externe"
+function stepCountLabel(form) {
+  if (form.externalUrl) return 'Lien externe';
+  // Les étapes conditionnelles (when) ne s'additionnent pas : un parcours
+  // en suit une seule (ex. "Badge" : demande OU modification OU perte).
+  const n = form.steps.filter((s) => !s.when).length + (form.steps.some((s) => s.when) ? 1 : 0);
+  return n + ' étape' + (n > 1 ? 's' : '');
 }
 
 // Rendre le menu des formulaires d'une catégorie
@@ -976,11 +1204,11 @@ function renderCategoryMenu() {
   
   grid.innerHTML = Object.keys(cat.forms).map(key => {
     const f = cat.forms[key];
-    return `<div class="form-menu-item" onclick="openForm('${key}')">
+    return `<div class="form-menu-item" role="button" tabindex="0" data-onclick="openMenuForm('${key}')">
       <div class="form-menu-icon">${icon(f.icon || 'fileText')}</div>
       <div class="form-menu-text">
         <div class="form-menu-name">${f.title}</div>
-        <div class="form-menu-steps">${f.steps.length} étape${f.steps.length > 1 ? 's' : ''}</div>
+        <div class="form-menu-steps">${stepCountLabel(f)}</div>
       </div>
       <div class="form-menu-arrow">${icon('chevronRight')}</div>
     </div>`;
@@ -991,16 +1219,40 @@ function renderCategoryMenu() {
 // Rendu des étapes et des champs de formulaire
 // -----------------------------------------------------------------------------
 
+// Une étape portant when: { step, radio } n'est active que si le choix de
+// l'étape `step` correspond (ex. formulaire "Badge" : une étape par type de demande).
+function stepIsActive(step) {
+  if (!step.when) return true;
+  const chosen = formData[step.when.step + '-radio'];
+  const expected = Array.isArray(step.when.radio) ? step.when.radio : [step.when.radio];
+  return expected.includes(chosen);
+}
+
+// Étapes actives, avec leur numéro d'origine (1..N) qui préfixe les clés de données
+function getActiveSteps() {
+  const form = getCurrentForm();
+  return form.steps.map((step, i) => ({ step, index: i + 1 })).filter(({ step }) => stepIsActive(step));
+}
+
+function nextActiveIndex() {
+  const next = getActiveSteps().find(({ index }) => index > currentStep);
+  return next ? next.index : null;
+}
+
+function prevActiveIndex() {
+  const previous = getActiveSteps().filter(({ index }) => index < currentStep).pop();
+  return previous ? previous.index : null;
+}
+
 // Rendre les étapes
 function renderSteps() {
-  const form = getCurrentForm();
-  document.getElementById('wz-steps').innerHTML = form.steps.map((s, idx) => {
-    const num = idx + 1;
-    const state = num < currentStep ? 'done' : num === currentStep ? 'current' : '';
-    const showLine = num < form.steps.length;
-    return `<div class="wz-step ${state}" onclick="goToStep(${num})" style="position: relative;">
-      <div class="wz-step-num">${num < currentStep ? icon('check') : num}</div>
-      <div class="wz-step-label">${s.label}</div>
+  const active = getActiveSteps();
+  document.getElementById('wz-steps').innerHTML = active.map(({ step, index }, pos) => {
+    const state = index < currentStep ? 'done' : index === currentStep ? 'current' : '';
+    const showLine = pos < active.length - 1;
+    return `<div class="wz-step ${state}" role="button" tabindex="0"${state === 'current' ? ' aria-current="step"' : ''} data-onclick="goToStep(${index})">
+      <div class="wz-step-num">${index < currentStep ? icon('check') : pos + 1}</div>
+      <div class="wz-step-label">${step.label}</div>
       ${showLine ? '<div class="wz-step-line"></div>' : ''}
     </div>`;
   }).join('');
@@ -1011,7 +1263,7 @@ function renderStepContent(stepIdx) {
   const form = getCurrentForm();
   const s = form.steps[stepIdx - 1];
   let inner = '';
-  
+
   if (s.type === 'checklist') {
     inner = renderChecklistHtml(s.items, stepIdx);
   } else if (s.type === 'fields') {
@@ -1025,7 +1277,7 @@ function renderStepContent(stepIdx) {
   } else if (s.type === 'file-upload') {
     inner = renderFileUploadHtml(s, stepIdx);
   }
-  
+
   return `<div class="wz-step-header">
     <div class="wz-step-title">${s.title}</div>
     <div class="wz-step-desc">${s.desc}</div>
@@ -1036,21 +1288,112 @@ function renderStepContent(stepIdx) {
 function showStep(n) {
   const form = getCurrentForm();
   document.getElementById('wz-main').innerHTML = renderStepContent(n);
-  document.getElementById('wz-progress').textContent = `Étape ${n} sur ${form.steps.length}`;
-  document.getElementById('btn-prev').disabled = (n === 1);
-  const btnNext = document.getElementById('btn-next');
-  btnNext.textContent = n === form.steps.length ? 'Envoyer la demande' : 'Suivant →';
+  window.scrollTo(0, 0); // chaque étape commence en haut, titre visible sous l'en-tête
   document.getElementById('wz-footer').style.display = 'flex';
+  // Le bouton a pu rester désactivé par un envoi précédent (submitForm)
+  document.getElementById('btn-next').disabled = false;
+  restoreStepData(n);
   renderSteps();
+  refreshProgress();
 }
 
-// Aller à une étape
+// Compteur "Étape X sur N", bouton Précédent et libellé du bouton principal :
+// recalculés aussi quand un choix radio active ou retire des étapes.
+function refreshProgress() {
+  const active = getActiveSteps();
+  const position = active.findIndex(({ index }) => index === currentStep) + 1;
+  document.getElementById('wz-progress').textContent = `Étape ${position} sur ${active.length}`;
+  document.getElementById('btn-prev').disabled = prevActiveIndex() === null;
+  document.getElementById('btn-next').textContent = nextActiveIndex() === null ? 'Envoyer la demande' : 'Suivant →';
+}
+
+// Réaffiche les valeurs déjà saisies quand on revient sur une étape
+// (sinon elles seraient perdues, puis écrasées par du vide à la sauvegarde).
+function restoreStepData(stepIdx) {
+  document.querySelectorAll(`.wz-input[data-step="${stepIdx}"]`).forEach((input) => {
+    const saved = formData[stepIdx + '-field-' + input.dataset.field];
+    if (saved !== undefined) input.value = saved;
+  });
+
+  const savedRadio = formData[stepIdx + '-radio'];
+  if (savedRadio) {
+    document.querySelectorAll(`.wz-radio-row[data-step="${stepIdx}"] .wz-radio-item`).forEach((item) => {
+      if (item.textContent.trim() === savedRadio) {
+        item.classList.add('selected');
+        item.setAttribute('aria-checked', 'true');
+      }
+    });
+  }
+
+  const savedChecks = formData[stepIdx + '-checklist'];
+  if (Array.isArray(savedChecks)) {
+    document.querySelectorAll(`.wz-check-group[data-step="${stepIdx}"] .wz-check-item`).forEach((item) => {
+      if (savedChecks.includes(item.textContent.trim())) {
+        item.classList.add('checked');
+        item.setAttribute('aria-checked', 'true');
+      }
+    });
+  }
+}
+
+// Contrôle des champs obligatoires d'une étape (après saveCurrentStepData).
+// Renvoie un message d'erreur, ou '' si l'étape est valide.
+function validateStep(stepIdx) {
+  const form = getCurrentForm();
+  const s = form.steps[stepIdx - 1];
+  if (!s) return '';
+
+  const missing = [];
+  const checkField = (f, fi) => {
+    const value = String(formData[stepIdx + '-field-' + fi] || '').trim();
+    if (f.req && !value) missing.push(f.label);
+    else if (value && f.type === 'email' && !isValidEmailFormat(value)) missing.push(f.label + ' (adresse e-mail invalide)');
+  };
+
+  if (s.type === 'fields' || s.type === 'mixed') (s.fields || []).forEach(checkField);
+  if (s.type === 'mixed' && s.radio && s.radio.req && !formData[stepIdx + '-radio']) {
+    missing.push(s.radio.label);
+  }
+  if (s.type === 'file-upload' && s.required && !(uploadedFiles[stepIdx] || []).length) {
+    return `Merci d'ajouter au moins un fichier (« ${s.label} »).`;
+  }
+  if (s.type === 'file-upload' && uploadsInProgress > 0) {
+    return "Un fichier est en cours d'envoi, merci de patienter quelques instants.";
+  }
+
+  return missing.length ? 'Merci de compléter : ' + missing.join(', ') + '.' : '';
+}
+
+function showStepError(message) {
+  let box = document.getElementById('wz-step-error');
+  if (!box) {
+    box = document.createElement('div');
+    box.id = 'wz-step-error';
+    box.className = 'wz-error';
+    box.setAttribute('role', 'alert');
+    const main = document.getElementById('wz-main');
+    main.insertBefore(box, main.firstChild);
+  }
+  box.textContent = message;
+  // Sur un long formulaire, le message est en haut : on y amène l'utilisateur
+  box.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
+// Aller à une étape (retour libre ; en avant, uniquement l'étape active suivante)
 function goToStep(n) {
   saveCurrentStepData(currentStep);
-  if (n <= currentStep || n === currentStep + 1) {
-    currentStep = n;
-    showStep(currentStep);
+  if (!getActiveSteps().some(({ index }) => index === n)) return;
+
+  if (n > currentStep) {
+    if (n !== nextActiveIndex()) return;
+    const error = validateStep(currentStep);
+    if (error) {
+      showStepError(error);
+      return;
+    }
   }
+  currentStep = n;
+  showStep(currentStep);
 }
 
 // Sauvegarder les données de l'étape actuelle
@@ -1058,56 +1401,51 @@ function saveCurrentStepData(stepIdx) {
   const form = getCurrentForm();
   const s = form.steps[stepIdx - 1];
   if (!s) return;
-  
+
   if (s.type === 'fields' || s.type === 'mixed') {
-    document.querySelectorAll(`.wz-input[data-step="${stepIdx}"]`).forEach(input => {
+    document.querySelectorAll(`.wz-input[data-step="${stepIdx}"]`).forEach((input) => {
       formData[stepIdx + '-field-' + input.dataset.field] = input.value;
     });
   }
-  
+
   if (s.type === 'mixed' && s.radio) {
     const selected = document.querySelector(`.wz-radio-row[data-step="${stepIdx}"] .wz-radio-item.selected`);
     formData[stepIdx + '-radio'] = selected ? selected.textContent.trim() : '';
   }
-  
+
   if (s.type === 'checklist') {
-    const checked = Array.from(document.querySelectorAll(`.wz-check-group[data-step="${stepIdx}"] .wz-check-item.checked`)).map(el => el.textContent.trim());
+    const checked = Array.from(document.querySelectorAll(`.wz-check-group[data-step="${stepIdx}"] .wz-check-item.checked`)).map((el) => el.textContent.trim());
     formData[stepIdx + '-checklist'] = checked;
   }
+
   if (s.type === 'file-upload') {
-    const fileList = document.querySelector(`.wz-file-list[data-step="${stepIdx}"]`);
-    if (fileList) {
-      const files = [];
-      fileList.querySelectorAll('.wz-file-item').forEach(item => {
-        const fileData = {
-          name: item.dataset.filename,
-          size: item.dataset.filesize,
-          type: item.dataset.filetype
-        };
-        files.push(fileData);
-      });
-      formData[stepIdx + '-files'] = files;
-    }
+    formData[stepIdx + '-files'] = (uploadedFiles[stepIdx] || []).map((f) => ({ id: f.id, name: f.name, size: f.size }));
   }
 }
 
 // Étape suivante
 function nextStep() {
-  const form = getCurrentForm();
   saveCurrentStepData(currentStep);
-  if (currentStep === form.steps.length) {
+  const error = validateStep(currentStep);
+  if (error) {
+    showStepError(error);
+    return;
+  }
+  const next = nextActiveIndex();
+  if (next === null) {
     submitForm();
     return;
   }
-  currentStep++;
+  currentStep = next;
   showStep(currentStep);
 }
 
 // Étape précédente
 function prevStep() {
-  if (currentStep > 1) {
+  const previous = prevActiveIndex();
+  if (previous !== null) {
     saveCurrentStepData(currentStep);
-    currentStep--;
+    currentStep = previous;
     showStep(currentStep);
   }
 }
@@ -1115,31 +1453,50 @@ function prevStep() {
 // Basculer une case à cocher
 function toggleCheck(el) {
   el.classList.toggle('checked');
+  el.setAttribute('aria-checked', el.classList.contains('checked') ? 'true' : 'false');
 }
 
 // Sélectionner une option radio
 function selectRadio(el) {
   const row = el.parentElement;
-  row.querySelectorAll('.wz-radio-item').forEach(item => item.classList.remove('selected'));
+  row.querySelectorAll('.wz-radio-item').forEach((item) => {
+    item.classList.remove('selected');
+    item.setAttribute('aria-checked', 'false');
+  });
   el.classList.add('selected');
+  el.setAttribute('aria-checked', 'true');
+  // Un choix peut activer ou désactiver des étapes (formulaire "Badge") :
+  // on enregistre et on rafraîchit la liste des étapes tout de suite.
+  saveCurrentStepData(currentStep);
+  renderSteps();
+  refreshProgress();
 }
 
 // -----------------------------------------------------------------------------
 // Fonctions de rendu HTML
 // -----------------------------------------------------------------------------
 
-// Rendre les champs de formulaire
+// Rendre les champs de formulaire (texte, date, zone de texte, liste déroulante)
 function renderFieldsHtml(fields, stepIdx) {
   return fields.map((f, fi) => {
-    if (f.type === 'textarea') {
-      return `<div class="wz-field">
-        <label class="wz-field-label">${f.label} ${f.req ? '<span class="req">*</span>' : ''}</label>
-        <textarea class="wz-input" data-step="${stepIdx}" data-field="${fi}" rows="3" style="resize: vertical;"></textarea>
+    const label = `<label class="wz-field-label">${f.label} ${f.req ? '<span class="req">*</span>' : ''}</label>`;
+    const attrs = `class="wz-input" data-step="${stepIdx}" data-field="${fi}"`;
+
+    if (f.options) {
+      return `<div class="wz-field">${label}
+        <select ${attrs}>
+          <option value="">— Choisir —</option>
+          ${f.options.map((o) => `<option value="${escapeHtml(o)}">${escapeHtml(o)}</option>`).join('')}
+        </select>
       </div>`;
     }
-    return `<div class="wz-field">
-      <label class="wz-field-label">${f.label} ${f.req ? '<span class="req">*</span>' : ''}</label>
-      <input class="wz-input" data-step="${stepIdx}" data-field="${fi}" type="${f.type || 'text'}" />
+    if (f.type === 'textarea') {
+      return `<div class="wz-field">${label}
+        <textarea ${attrs} rows="3" style="resize:vertical;"></textarea>
+      </div>`;
+    }
+    return `<div class="wz-field">${label}
+      <input ${attrs} type="${f.type || 'text'}" />
     </div>`;
   }).join('');
 }
@@ -1148,8 +1505,8 @@ function renderFieldsHtml(fields, stepIdx) {
 function renderRadioHtml(radio, stepIdx) {
   return `<div class="wz-field">
     <label class="wz-field-label">${radio.label} ${radio.req ? '<span class="req">*</span>' : ''}</label>
-    <div class="wz-radio-row" data-step="${stepIdx}" data-radiogroup="true">
-      ${radio.options.map(opt => `<div class="wz-radio-item" onclick="selectRadio(this)">${opt}</div>`).join('')}
+    <div class="wz-radio-row" role="radiogroup" data-step="${stepIdx}" data-radiogroup="true">
+      ${radio.options.map((opt) => `<div class="wz-radio-item" role="radio" aria-checked="false" tabindex="0" data-onclick="selectRadio(this)">${opt}</div>`).join('')}
     </div>
   </div>`;
 }
@@ -1157,57 +1514,240 @@ function renderRadioHtml(radio, stepIdx) {
 // Rendre une checklist
 function renderChecklistHtml(items, stepIdx) {
   return `<div class="wz-check-group" data-step="${stepIdx}">
-    ${items.map(item => `<div class="wz-check-item" onclick="toggleCheck(this)">
+    ${items.map((item) => `<div class="wz-check-item" role="checkbox" aria-checked="false" tabindex="0" data-onclick="toggleCheck(this)">
       <div class="wz-checkbox"></div>${item}
     </div>`).join('')}
   </div>`;
 }
 
-// Rendre le récapitulatif
+// -----------------------------------------------------------------------------
+// Pièces jointes : dépôt immédiat sur le serveur, rattachement à l'envoi
+// -----------------------------------------------------------------------------
+
+function formatFileSize(bytes) {
+  if (bytes < 1024) return bytes + ' o';
+  if (bytes < 1024 * 1024) return Math.round(bytes / 1024) + ' Ko';
+  return (bytes / 1024 / 1024).toFixed(1) + ' Mo';
+}
+
+function renderFileListHtml(stepIdx) {
+  const files = uploadedFiles[stepIdx] || [];
+  return files.map((f) => `<div class="wz-file-item">
+    <span class="wz-file-name">${escapeHtml(f.name)}</span>
+    <span class="wz-file-size">${formatFileSize(f.size)}</span>
+    <span class="wz-file-remove" role="button" tabindex="0" aria-label="Retirer le fichier" data-onclick="removeUploadedFile(${stepIdx}, '${f.id}')">✕</span>
+  </div>`).join('');
+}
+
+function renderFileUploadHtml(step, stepIdx) {
+  const maxMb = Math.round((step.max_file_size || 20971520) / 1048576);
+  const formats = (step.allowed_formats || []).map((f) => f.toUpperCase()).join(', ');
+  const multiple = step.max_files && step.max_files > 1;
+  return `<div class="wz-file-upload-container">
+    <div class="wz-file-upload-hint">Formats acceptés : ${formats} — ${maxMb} Mo maximum par fichier${step.max_files ? ' — ' + step.max_files + ' fichier' + (step.max_files > 1 ? 's' : '') + ' maximum' : ''}</div>
+    <input type="file" class="wz-file-input" id="wz-file-input-${stepIdx}" ${multiple ? 'multiple' : ''} data-onchange="onFilePicked(this, ${stepIdx})" />
+    <button type="button" class="wz-btn-ghost" data-onclick="pickFile(${stepIdx})">Ajouter un fichier</button>
+    <div id="wz-file-status-${stepIdx}" class="wz-file-status" role="status"></div>
+    <div class="wz-file-list" data-step="${stepIdx}" id="wz-file-list-${stepIdx}">${renderFileListHtml(stepIdx)}</div>
+  </div>`;
+}
+
+function setFileStatus(stepIdx, message, isError) {
+  const el = document.getElementById('wz-file-status-' + stepIdx);
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.toggle('is-error', !!isError);
+}
+
+function pickFile(stepIdx) {
+  const input = document.getElementById('wz-file-input-' + stepIdx);
+  if (input) input.click();
+}
+
+async function onFilePicked(input, stepIdx) {
+  const step = getCurrentForm().steps[stepIdx - 1];
+  const files = Array.from(input.files || []);
+  input.value = '';
+  if (files.length === 0) return;
+
+  const maxBytes = step.max_file_size || 20971520;
+  uploadedFiles[stepIdx] = uploadedFiles[stepIdx] || [];
+
+  for (const file of files) {
+    if (step.max_files && uploadedFiles[stepIdx].length >= step.max_files) {
+      setFileStatus(stepIdx, `${step.max_files} fichier${step.max_files > 1 ? 's' : ''} maximum : retirez-en un pour en ajouter un autre.`, true);
+      break;
+    }
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (step.allowed_formats && !step.allowed_formats.includes(ext)) {
+      setFileStatus(stepIdx, `« ${file.name} » : format non accepté (${step.allowed_formats.join(', ')}).`, true);
+      continue;
+    }
+    if (file.size > maxBytes) {
+      setFileStatus(stepIdx, `« ${file.name} » dépasse ${Math.round(maxBytes / 1048576)} Mo.`, true);
+      continue;
+    }
+
+    uploadsInProgress++;
+    setFileStatus(stepIdx, `Envoi de « ${file.name} »…`, false);
+    try {
+      const body = new FormData();
+      body.append('file', file);
+      const response = await fetch('/api/uploads', { method: 'POST', body });
+      const data = await readApiJson(response);
+      if (!response.ok) throw new Error(data.error || 'Dépôt du fichier impossible.');
+      uploadedFiles[stepIdx].push(data.file);
+      setFileStatus(stepIdx, '', false);
+    } catch (err) {
+      setFileStatus(stepIdx, describeApiError(err, err.message), true);
+    } finally {
+      uploadsInProgress--;
+    }
+    const list = document.getElementById('wz-file-list-' + stepIdx);
+    if (list) list.innerHTML = renderFileListHtml(stepIdx);
+  }
+}
+
+async function removeUploadedFile(stepIdx, fileId) {
+  uploadedFiles[stepIdx] = (uploadedFiles[stepIdx] || []).filter((f) => f.id !== fileId);
+  const list = document.getElementById('wz-file-list-' + stepIdx);
+  if (list) list.innerHTML = renderFileListHtml(stepIdx);
+  try {
+    await fetch('/api/uploads/' + encodeURIComponent(fileId), { method: 'DELETE' });
+  } catch (err) {
+    console.warn('Suppression du dépôt impossible (il sera purgé automatiquement) :', err);
+  }
+}
+
+// -----------------------------------------------------------------------------
+// Récapitulatif et documents PDF / Word
+// -----------------------------------------------------------------------------
+
+function summaryRow(label, value) {
+  return `<div class="wz-summary-row">
+    <span class="wz-summary-key">${label}</span>
+    <span class="wz-summary-val">${escapeHtml(value)}</span>
+  </div>`;
+}
+
+// Rendre le récapitulatif (étapes actives uniquement)
 function renderSummaryHtml() {
   const form = getCurrentForm();
   let html = '<div class="wz-summary-section"><div class="wz-summary-title">Récapitulatif</div>';
-  
-  form.steps.forEach((s, idx) => {
-    if (s.type === 'summary') return;
-    const stepNum = idx + 1;
-    
-    if (s.type === 'fields') {
-      s.fields.forEach((f, fi) => {
-        const val = formData[stepNum + '-field-' + fi] || '—';
-        html += `<div class="wz-summary-row">
-          <span class="wz-summary-key">${f.label}</span>
-          <span class="wz-summary-val">${val}</span>
-        </div>`;
-      });
-    } else if (s.type === 'checklist') {
+
+  getActiveSteps().forEach(({ step: s, index: stepNum }) => {
+    if (s.type === 'summary' || s.type === 'fixed') return;
+
+    if (s.type === 'checklist') {
       const checked = formData[stepNum + '-checklist'] || [];
-      html += `<div class="wz-summary-row">
-        <span class="wz-summary-key">${s.label}</span>
-        <span class="wz-summary-val">${checked.length ? checked.join(', ') : 'Aucun'}</span>
-      </div>`;
-    } else if (s.type === 'mixed') {
-      if (s.radio) {
-        const val = formData[stepNum + '-radio'] || '—';
-        html += `<div class="wz-summary-row">
-          <span class="wz-summary-key">${s.radio.label}</span>
-          <span class="wz-summary-val">${val}</span>
-        </div>`;
-      }
-      if (s.fields && s.fields.length) {
-        s.fields.forEach((f, fi) => {
-          const val = formData[stepNum + '-field-' + fi] || '—';
-          html += `<div class="wz-summary-row">
-            <span class="wz-summary-key">${f.label}</span>
-            <span class="wz-summary-val">${val}</span>
-          </div>`;
-        });
-      }
+      html += summaryRow(s.label, checked.length ? checked.join(', ') : 'Aucun');
+    } else if (s.type === 'file-upload') {
+      const files = uploadedFiles[stepNum] || [];
+      html += summaryRow(s.label, files.length ? files.map((f) => f.name).join(', ') : 'Aucun fichier');
+    } else if (s.type === 'fields' || s.type === 'mixed') {
+      if (s.radio) html += summaryRow(s.radio.label, formData[stepNum + '-radio'] || '—');
+      (s.fields || []).forEach((f, fi) => {
+        html += summaryRow(f.label, formData[stepNum + '-field-' + fi] || '—');
+      });
     }
   });
-  
-  html += '</div><div class="wz-hint">En cliquant sur « Envoyer la demande », celle-ci sera transmise aux services concernés pour traitement.</div>';
+
+  html += '</div>';
+
+  if (Array.isArray(form.documents) && form.documents.length) {
+    const names = { pdf: 'PDF', docx: 'Word' };
+    html += `<div class="wz-summary-section doc-panel">
+      <div class="wz-summary-title">Document complété</div>
+      <p class="wz-hint">Téléchargez la fiche remplie avec les informations ci-dessus.</p>
+      <div class="doc-actions">
+        ${form.documents.map((f) => `<button type="button" class="wz-btn-ghost" data-onclick="downloadDocument('${f}')">Télécharger en ${names[f] || f}</button>`).join('')}
+      </div>
+      <div class="doc-mail">
+        <label class="doc-mail-label" for="doc-mail-to">Envoyer le document par e-mail</label>
+        <input id="doc-mail-to" class="wz-input" type="email" autocomplete="off" placeholder="adresse.du.destinataire@exemple.fr" data-onenter="sendDocumentByEmail()" />
+        <div class="doc-mail-formats">
+          ${form.documents.map((f) => `<label><input type="checkbox" class="doc-mail-format" value="${f}" checked /> ${names[f] || f}</label>`).join('')}
+        </div>
+        <button type="button" class="wz-btn-primary" id="doc-mail-btn" data-onclick="sendDocumentByEmail()">Envoyer le document</button>
+        <div id="doc-mail-status" class="doc-status" role="status"></div>
+      </div>
+    </div>`;
+  }
+
+  html += '<div class="wz-hint">En cliquant sur « Envoyer la demande », celle-ci sera transmise aux services concernés pour traitement.</div>';
   return html;
+}
+
+function setDocMailStatus(message, isError) {
+  const el = document.getElementById('doc-mail-status');
+  if (!el) return;
+  el.textContent = message || '';
+  el.classList.toggle('is-error', !!isError);
+  el.classList.toggle('is-ok', !isError && !!message);
+}
+
+// Envoie le(s) document(s) complété(s) à l'adresse saisie (champ libre)
+async function sendDocumentByEmail() {
+  const input = document.getElementById('doc-mail-to');
+  const button = document.getElementById('doc-mail-btn');
+  const to = input ? input.value.trim() : '';
+  const formats = Array.from(document.querySelectorAll('.doc-mail-format:checked')).map((c) => c.value);
+
+  if (!to || !isValidEmailFormat(to)) {
+    setDocMailStatus("Saisissez une adresse e-mail valide pour le destinataire.", true);
+    return;
+  }
+  if (formats.length === 0) {
+    setDocMailStatus('Cochez au moins un format (PDF ou Word).', true);
+    return;
+  }
+
+  button.disabled = true;
+  setDocMailStatus('Envoi en cours…', false);
+  try {
+    const response = await fetch(`/api/forms/${encodeURIComponent(currentCategoryKey)}/${encodeURIComponent(currentFormKey)}/document/send`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ to, formats, data: formData }),
+    });
+    const data = await readApiJson(response);
+    if (response.ok) {
+      setDocMailStatus(data.message || 'Document envoyé.', false);
+    } else {
+      setDocMailStatus(data.error || "L'envoi a échoué.", true);
+    }
+  } catch (err) {
+    setDocMailStatus(describeApiError(err, "L'envoi a échoué."), true);
+  } finally {
+    button.disabled = false;
+  }
+}
+
+async function downloadDocument(format) {
+  try {
+    const response = await fetch(`/api/forms/${encodeURIComponent(currentCategoryKey)}/${encodeURIComponent(currentFormKey)}/document`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ format, data: formData }),
+    });
+    if (!response.ok) {
+      const data = await readApiJson(response).catch(() => ({}));
+      showStepError(data.error || 'Impossible de générer le document.');
+      return;
+    }
+    const blob = await response.blob();
+    const disposition = response.headers.get('Content-Disposition') || '';
+    const match = /filename="?([^";]+)"?/.exec(disposition);
+    const link = document.createElement('a');
+    link.href = URL.createObjectURL(blob);
+    link.download = match ? match[1] : 'document.' + format;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(() => URL.revokeObjectURL(link.href), 10000);
+  } catch (err) {
+    showStepError(describeApiError(err, 'Impossible de générer le document.'));
+  }
 }
 
 // -----------------------------------------------------------------------------
@@ -1216,37 +1756,55 @@ function renderSummaryHtml() {
 
 // Afficher un écran (compatibilité avec l'ancien code)
 function showScreen(name, btn) {
-  const accueilScreen = document.getElementById('screen-accueil');
-  const connexionScreen = document.getElementById('screen-connexion');
+  // Un seul écran visible à la fois : accueil, catégorie/formulaire ou connexion.
+  ['accueil', 'categorie', 'connexion'].forEach((n) => {
+    const el = document.getElementById('screen-' + n);
+    if (el) el.style.display = 'none';
+  });
 
-  if (accueilScreen) accueilScreen.style.display = 'none';
-  if (connexionScreen) connexionScreen.style.display = 'none';
-
-  if (name === 'accueil') {
-    if (accueilScreen) accueilScreen.style.display = 'block';
-    if (currentUser) {
-      showAuthenticatedUI();
-    } else {
-      showUnauthenticatedUI();
-    }
-  } else if (name === 'connexion') {
-    if (connexionScreen) connexionScreen.style.display = 'block';
+  // Sans session, seul l'écran de connexion est accessible.
+  if (!currentUser && name !== 'connexion') {
     showUnauthenticatedUI();
-  } else if (name === 'categorie') {
-    if (accueilScreen) accueilScreen.style.display = 'block';
-    if (currentUser) {
-      showAuthenticatedUI();
-    }
+    return;
   }
+
+  if (name === 'connexion') {
+    showUnauthenticatedUI();
+    return;
+  }
+
+  const target = document.getElementById('screen-' + name);
+  if (target) target.style.display = 'block';
+  if (name === 'accueil') setAdminPanelVisibility();
+  window.scrollTo(0, 0); // un nouvel écran s'ouvre toujours en haut de page
 }
 
 // Afficher un onglet de l'accueil (compatibilité)
+// Active un onglet (accueil | suivi | admin) : bouton + vue, sans appel réseau
+function selectTab(tab) {
+  const views = { accueil: 'accueil-tab-view', suivi: 'suivi-tab-view', admin: 'admin-panel' };
+  const buttons = { accueil: 'tab-accueil', suivi: 'tab-suivi', admin: 'admin-panel-toggle' };
+  Object.keys(views).forEach((key) => {
+    const view = document.getElementById(views[key]);
+    const button = document.getElementById(buttons[key]);
+    if (view) view.style.display = key === tab ? 'block' : 'none';
+    if (button) {
+      button.classList.toggle('active', key === tab);
+      if (key === tab) button.setAttribute('aria-current', 'page');
+      else button.removeAttribute('aria-current');
+    }
+  });
+}
+
+// Clic sur un onglet de la navigation principale
 function showAccueilTab(tab) {
-  document.getElementById('tab-accueil').classList.toggle('active', tab === 'accueil');
-  document.getElementById('tab-suivi').classList.toggle('active', tab === 'suivi');
-  document.getElementById('accueil-tab-view').style.display = tab === 'accueil' ? 'block' : 'none';
-  document.getElementById('suivi-tab-view').style.display = tab === 'suivi' ? 'block' : 'none';
+  if (tab === 'admin' && (!currentUser || currentUser.role !== 'superAdmin')) tab = 'accueil';
+  // Depuis un formulaire ouvert, un onglet ramène d'abord à l'accueil
+  if (document.getElementById('screen-categorie').style.display === 'block') backToAccueil();
+  selectTab(tab);
   if (tab === 'suivi') renderSuiviLists();
+  if (tab === 'admin') refreshAdminData();
+  window.scrollTo(0, 0);
 }
 
 // Afficher une vue de connexion (compatibilité)
@@ -1264,13 +1822,32 @@ function showLoginViewReal(name) {
 // Initialisation
 // -----------------------------------------------------------------------------
 
-function initApp() {
-  renderCategories('');
-  checkAuth();
+// Affiche la version/le build du serveur en bas à droite (diagnostic)
+async function showBuildInfo() {
+  const el = document.getElementById('build-info');
+  if (!el) return;
+  try {
+    const info = await (await fetch('/api/health')).json();
+    el.textContent = 'v' + info.version + ' · build ' + String(info.build || '?').replace('T', ' ').slice(0, 16);
+  } catch (err) {
+    el.textContent = 'serveur API injoignable (page non servie par Node ?)';
+    el.classList.add('is-error');
+  }
+}
 
-  const bypassBtn = document.getElementById('bypass-auth-btn');
-  if (bypassBtn) {
-    bypassBtn.addEventListener('click', bypassAuth);
+function initApp() {
+  showBuildInfo();
+  renderCategories('');
+  bindAdminForm();
+  checkAuth();
+  loadAuthConfig();
+
+  // Fenêtre de détail : un clic sur le fond sombre la referme (Échap fonctionne déjà)
+  const detailDialog = document.getElementById('detail-dialog');
+  if (detailDialog) {
+    detailDialog.addEventListener('click', (event) => {
+      if (event.target === detailDialog) detailDialog.close();
+    });
   }
 }
 
