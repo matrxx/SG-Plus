@@ -99,8 +99,6 @@ function icon(name, extraStyle) {
 // Métadonnées des catégories
 const categoryMeta = [
   { key: 'arrivee-depart', icon: 'walk', bg: '#9FE1CB', fg: '#085041' },
-  { key: 'fournitures', icon: 'package', bg: '#F5C4B3', fg: '#712B13' },
-  { key: 'budget', icon: 'budget', bg: '#B5D4F4', fg: '#0C447C' },
   { key: 'menage', icon: 'spray', bg: '#F4C0D1', fg: '#72243E' },
   { key: 'intervention-technique', icon: 'tool', bg: '#FAC775', fg: '#633806' },
   { key: 'acces-sites', icon: 'badge', bg: '#85B7EB', fg: '#042C53' },
@@ -897,7 +895,6 @@ async function submitForm() {
 
     if (response.ok) {
       uploadedFiles = {};
-      const isExpenseRequest = currentCategoryKey === 'budget' && currentFormKey === 'proposition_depenses';
       const mailOk = data.notification === 'sent';
       // Ajouter à la liste locale
       submittedRequests.unshift({
@@ -913,8 +910,8 @@ async function submitForm() {
       document.getElementById('wz-main').innerHTML = `
         <div class="wz-success">
           <div class="wz-success-icon">${icon('check')}</div>
-          <div class="wz-success-title">${isExpenseRequest ? 'Demande envoyée au responsable' : 'Demande envoyée'}</div>
-          <div class="wz-success-text">${isExpenseRequest ? 'Votre demande de dépense attend maintenant la validation du responsable indiqué.' : `Votre demande « ${escapeHtml(form.title)} » a été transmise.`}</div>
+          <div class="wz-success-title">Demande envoyée</div>
+          <div class="wz-success-text">Votre demande « ${escapeHtml(form.title)} » a été transmise.</div>
           ${mailOk ? '' : '<div class="wz-hint">Votre demande est bien enregistrée, mais la notification par e-mail n\'a pas pu être envoyée immédiatement : elle sera retransmise par l\'administration.</div>'}
           <div class="wz-success-ref">Référence : <strong>${escapeHtml(data.request.reference)}</strong></div>
           <button type="button" class="wz-btn-primary" data-onclick="backToAccueil()">Retour à l'accueil</button>
@@ -979,86 +976,6 @@ async function renderSuiviLists() {
   
   termineesList.innerHTML = terminees.map(renderSuiviCard).join('');
   termineesEmpty.style.display = terminees.length === 0 ? 'block' : 'none';
-
-  await renderPendingValidations();
-}
-
-async function renderPendingValidations() {
-  const section = document.getElementById('validation-section');
-  const list = document.getElementById('validation-list');
-  const empty = document.getElementById('validation-empty');
-  if (!section || !list || !empty || !currentUser) return;
-
-  try {
-    const response = await fetch('/api/requests/pending-validation');
-    const data = await parseJsonResponse(response);
-    if (!response.ok || !Array.isArray(data.requests)) {
-      section.style.display = 'none';
-      return;
-    }
-
-    section.style.display = 'block';
-    empty.style.display = data.requests.length === 0 ? 'block' : 'none';
-    list.innerHTML = data.requests.map(request => {
-      const isValidated = request.status === 'validee_responsable';
-      return `<div class="suivi-card">
-        <div class="suivi-card-icon">${icon('budget')}</div>
-        <div class="suivi-card-main">
-          <div class="suivi-card-title">${escapeHtml(request.title)}</div>
-          <div class="suivi-card-meta">${escapeHtml(request.reference || '-')} · ${request.created_at ? new Date(request.created_at).toLocaleDateString('fr-FR') : '-'}</div>
-        </div>
-        <div class="suivi-card-right">
-          <span class="suivi-status ${(statusLabels[request.status] || statusLabels.en_cours).cls}">${(statusLabels[request.status] || statusLabels.en_cours).label}</span>
-          ${isValidated
-            ? `<button class="suivi-card-action" data-onclick="transmitBudgetRequest(${request.id})">Transmettre au service budget</button>`
-            : `<button class="suivi-card-action" data-onclick="validateExpenseRequest(${request.id})">Valider par signature</button>`}
-        </div>
-      </div>`;
-    }).join('');
-  } catch (err) {
-    console.error('[requests/pending-validation] Erreur:', err);
-    section.style.display = 'none';
-  }
-}
-
-async function validateExpenseRequest(requestId) {
-  if (!window.confirm('Je confirme avoir pris connaissance de cette demande et apposer ma signature électronique simple.')) return;
-
-  try {
-    const response = await fetch(`/api/requests/${requestId}/validate-responsible`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ signatureAccepted: true }),
-    });
-    const data = await parseJsonResponse(response);
-    if (!response.ok) {
-      alert(data.error || 'La validation est impossible.');
-      return;
-    }
-    alert(data.message || 'Demande validée.');
-    await renderSuiviLists();
-  } catch (err) {
-    console.error('[requests/validate-responsible] Erreur:', err);
-    alert('Erreur lors de la validation.');
-  }
-}
-
-async function transmitBudgetRequest(requestId) {
-  if (!window.confirm('Transmettre cette demande au service budget ?')) return;
-
-  try {
-    const response = await fetch(`/api/requests/${requestId}/transmit-budget`, { method: 'POST' });
-    const data = await parseJsonResponse(response);
-    if (!response.ok) {
-      alert(data.error || 'La transmission est impossible.');
-      return;
-    }
-    alert(data.message || 'Demande transmise au service budget.');
-    await renderSuiviLists();
-  } catch (err) {
-    console.error('[requests/transmit-budget] Erreur:', err);
-    alert('Erreur lors de la transmission.');
-  }
 }
 
 // Rendre une carte de suivi
@@ -1069,9 +986,6 @@ function categoryTitle(key) {
 function renderSuiviCard(r) {
   const st = statusLabels[r.status] || { label: r.status || 'Inconnu', cls: 'status-brouillon' };
   const id = Number(r.id);
-  const transmit = r.status === 'validee_responsable'
-    ? `<button type="button" class="suivi-card-action" data-onclick="transmitBudgetRequest(${id})">Transmettre au service budget</button>`
-    : '';
   return `<div class="suivi-card">
     <div class="suivi-card-icon">${icon('fileText')}</div>
     <div class="suivi-card-main">
@@ -1080,7 +994,6 @@ function renderSuiviCard(r) {
     </div>
     <div class="suivi-card-right">
       <span class="suivi-status ${st.cls}">${escapeHtml(st.label)}</span>
-      ${transmit}
       <button type="button" class="suivi-card-action" data-onclick="showRequestDetail(${id})">Détail</button>
     </div>
   </div>`;
