@@ -373,12 +373,16 @@ router.post(
       } else {
         const result = await pool.query('SELECT * FROM users WHERE email = $1', [email]);
         if (result.rows.length === 0) {
+          // La réponse reste générique pour le navigateur ; la cause réelle est
+          // consignée côté serveur pour le diagnostic (npm run doctor).
+          console.warn(`[auth/login] Échec : aucun compte pour ${email} dans cette base de données.`);
           return res.status(401).json(GENERIC_LOGIN_ERROR);
         }
 
         const localUser = result.rows[0];
 
         if (localUser.status !== 'active') {
+          console.warn(`[auth/login] Échec : le compte ${email} a le statut "${localUser.status}" (non activé).`);
           return res.status(401).json({
             error: "Ce compte n'est pas encore activé. Vérifiez votre boîte mail.",
           });
@@ -387,11 +391,13 @@ router.post(
         // Compte sans mot de passe (valideur pas encore activé, ou compte
         // Exchange) : même réponse qu'un mauvais mot de passe.
         if (!localUser.password_hash) {
+          console.warn(`[auth/login] Échec : le compte ${email} n'a pas de mot de passe défini.`);
           return res.status(401).json(GENERIC_LOGIN_ERROR);
         }
 
         const passwordValid = await argon2.verify(localUser.password_hash, password);
         if (!passwordValid) {
+          console.warn(`[auth/login] Échec : mot de passe incorrect pour ${email}.`);
           return res.status(401).json(GENERIC_LOGIN_ERROR);
         }
 
