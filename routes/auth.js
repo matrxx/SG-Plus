@@ -135,8 +135,9 @@ router.post(
 
       let userId;
 
-      if (existing.rows.length > 0 && existing.rows[0].status === 'active') {
-        // Compte déjà actif : on ne crée rien, on ne révèle rien de plus.
+      if (existing.rows.length > 0 && existing.rows[0].status !== 'pending') {
+        // Compte déjà actif (ou désactivé / expiré) : on ne crée rien, on ne révèle
+        // rien de plus. Sans ce cas, l'INSERT ci-dessous échouerait sur l'e-mail unique.
         await client.query('COMMIT');
         return res.json(GENERIC_SIGNUP_RESPONSE);
       }
@@ -301,10 +302,19 @@ router.get('/verify-email', async (req, res) => {
       });
     }
 
-    await client.query('UPDATE users SET status = $1, updated_at = now() WHERE id = $2', [
-      'active',
-      verification.user_id,
-    ]);
+    // Seul un compte "en attente" est activé par ce lien : un compte désactivé
+    // par un administrateur ne doit pas se réactiver avec un ancien e-mail.
+    const activated = await client.query(
+      `UPDATE users SET status = 'active', updated_at = now() WHERE id = $1 AND status = 'pending'`,
+      [verification.user_id]
+    );
+    if (activated.rowCount === 0) {
+      const current = await client.query('SELECT status FROM users WHERE id = $1', [verification.user_id]);
+      if (!current.rows[0] || current.rows[0].status !== 'active') {
+        await client.query('ROLLBACK');
+        return res.status(400).json({ error: 'Lien de vérification invalide.' });
+      }
+    }
     await client.query('UPDATE email_verifications SET used_at = now() WHERE id = $1', [
       verification.id,
     ]);
@@ -339,6 +349,7 @@ router.post(
     const { password } = req.body;
 
     const GENERIC_LOGIN_ERROR = { error: 'Adresse e-mail ou mot de passe incorrect.' };
+    const DISABLED_LOGIN_ERROR = { error: "Ce compte a été désactivé. Contactez un administrateur." };
 
     try {
       let user;
@@ -360,6 +371,10 @@ router.post(
         // l'ID entier de users (clé étrangère de requests.user_id). Le rôle
         // vient de NOTRE base, jamais de la réponse du connecteur.
         const localUser = await findOrCreateExchangeUser(exchangeUser);
+        if (localUser.status === 'disabled') {
+          // L'identité vient d'être validée par Exchange : on peut être explicite.
+          return res.status(401).json(DISABLED_LOGIN_ERROR);
+        }
         if (localUser.status !== 'active') {
           return res.status(401).json(GENERIC_LOGIN_ERROR);
         }
@@ -380,6 +395,14 @@ router.post(
         }
 
         const localUser = result.rows[0];
+
+        if (localUser.status === 'disabled') {
+          // Le message précis n'est donné qu'à qui connaît le mot de passe,
+          // pour ne pas révéler quelles adresses ont un compte.
+          const known = localUser.password_hash && (await argon2.verify(localUser.password_hash, password));
+          console.warn(`[auth/login] Échec : le compte ${email} est désactivé.`);
+          return res.status(401).json(known ? DISABLED_LOGIN_ERROR : GENERIC_LOGIN_ERROR);
+        }
 
         if (localUser.status !== 'active') {
           console.warn(`[auth/login] Échec : le compte ${email} a le statut "${localUser.status}" (non activé).`);

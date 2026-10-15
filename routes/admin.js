@@ -10,11 +10,19 @@ const { generateToken, hashToken, getExpiryDate, PASSWORD_SETUP_TTL_HOURS } = re
 const { sendPasswordSetupEmail } = require('../utils/mailer');
 const { isAllowedDomain } = require('../utils/emailDomain');
 const { notifyRequest } = require('../lib/requestMail');
+const { removeFile } = require('../utils/uploads');
 
 const router = express.Router();
 
-// L'interface et ses endpoints sont strictement réservés aux superAdmin.
-router.use(requireAuth, requireRole('superAdmin'));
+// Deux niveaux d'accès :
+//  - admin et superAdmin : consulter les comptes, désactiver / réactiver ;
+//  - superAdmin seul : tout ce qui suit (création, modification, suppression
+//    de comptes, valideurs, demandes).
+// Les routes déclarées AVANT router.use(onlySuperAdmin) sont donc accessibles
+// aux administrateurs simples ; celles déclarées après sont réservées au superAdmin.
+router.use(requireAuth);
+const onlySuperAdmin = requireRole('superAdmin');
+const adminOrSuperAdmin = requireRole('admin', 'superAdmin');
 
 function normalizeRole(role) {
   const value = (role || 'agent').toLowerCase();
@@ -23,29 +31,33 @@ function normalizeRole(role) {
   return value === 'validator' || value === 'valideur' ? 'validator' : 'agent';
 }
 
-function isExpiredUser(user) {
-  if (!user) return false;
-  if (user.status === 'expired') return true;
-  if (user.status === 'pending' && user.created_at) {
-    return new Date(user.created_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
-  }
-  return false;
+function parseId(value) {
+  const id = Number.parseInt(value, 10);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+}
+
+// Ferme toutes les sessions ouvertes d'un compte (désactivation, suppression,
+// changement de rôle) : sans cela, la personne resterait connectée jusqu'à
+// l'expiration de son cookie (8 h).
+async function endSessionsOf(userId) {
+  await pool.query(`DELETE FROM "session" WHERE (sess->>'userId') = $1`, [String(userId)]);
 }
 
 // ---------------------------------------------------------------
-// GET /api/admin/users — Liste des comptes créés
+// GET /api/admin/users — Liste des comptes (admin et superAdmin)
 // ---------------------------------------------------------------
-router.get('/users', async (req, res) => {
+router.get('/users', adminOrSuperAdmin, async (req, res) => {
   try {
     const result = await pool.query(
-      `SELECT id, first_name, last_name, email, role, status, created_at,
+      `SELECT u.id, u.first_name, u.last_name, u.email, u.role, u.status, u.created_at,
+              (SELECT COUNT(*)::int FROM requests r WHERE r.user_id = u.id) AS request_count,
               CASE
-                WHEN status = 'expired' THEN true
-                WHEN status = 'pending' AND created_at < NOW() - INTERVAL '30 days' THEN true
+                WHEN u.status = 'expired' THEN true
+                WHEN u.status = 'pending' AND u.created_at < NOW() - INTERVAL '30 days' THEN true
                 ELSE false
               END AS is_expired
-       FROM users
-       ORDER BY created_at DESC`
+       FROM users u
+       ORDER BY u.created_at DESC`
     );
 
     return res.json({ users: result.rows });
@@ -55,6 +67,63 @@ router.get('/users', async (req, res) => {
   }
 });
 
+// ---------------------------------------------------------------
+// PATCH /api/admin/users/:id/status — Désactiver / réactiver un compte
+// (admin et superAdmin). Un administrateur simple ne peut agir que sur les
+// agents et les valideurs ; personne ne peut agir sur son propre compte.
+// ---------------------------------------------------------------
+router.patch(
+  '/users/:id/status',
+  adminOrSuperAdmin,
+  [body('status').isIn(['active', 'disabled']).withMessage('Le statut est invalide.')],
+  async (req, res) => {
+    const errors = validationResult(req);
+    if (!errors.isEmpty()) return res.status(400).json({ error: errors.array()[0].msg });
+
+    const targetId = parseId(req.params.id);
+    if (!targetId) return res.status(400).json({ error: 'Compte invalide.' });
+    if (targetId === req.session.userId) {
+      return res.status(403).json({ error: 'Vous ne pouvez pas modifier votre propre compte.' });
+    }
+
+    try {
+      const found = await pool.query('SELECT id, email, role, status FROM users WHERE id = $1', [targetId]);
+      if (found.rows.length === 0) return res.status(404).json({ error: 'Compte introuvable.' });
+      const target = found.rows[0];
+
+      if (req.session.userRole !== 'superAdmin' && !['agent', 'validator'].includes(target.role)) {
+        return res.status(403).json({ error: 'Seul un superAdmin peut modifier un compte administrateur.' });
+      }
+
+      const wanted = req.body.status;
+      if (wanted === 'disabled' && target.status !== 'active') {
+        return res.status(409).json({ error: 'Seul un compte actif peut être désactivé.' });
+      }
+      if (wanted === 'active' && target.status !== 'disabled') {
+        return res.status(409).json({ error: "Ce compte n'est pas désactivé." });
+      }
+
+      const result = await pool.query(
+        `UPDATE users SET status = $1, updated_at = NOW() WHERE id = $2
+         RETURNING id, first_name, last_name, email, role, status, created_at`,
+        [wanted, targetId]
+      );
+      if (wanted === 'disabled') await endSessionsOf(targetId);
+
+      console.log(`[admin] ${req.session.userEmail} a ${wanted === 'disabled' ? 'désactivé' : 'réactivé'} le compte ${target.email}.`);
+      return res.json({
+        message: wanted === 'disabled' ? 'Compte désactivé.' : 'Compte réactivé.',
+        user: result.rows[0],
+      });
+    } catch (err) {
+      console.error('[admin/user-status] Erreur :', err);
+      return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
+    }
+  }
+);
+
+// Tout ce qui suit est réservé au superAdmin.
+router.use(onlySuperAdmin);
 // ---------------------------------------------------------------
 // POST /api/admin/users — Créer un compte depuis le formulaire admin
 // ---------------------------------------------------------------
@@ -119,7 +188,7 @@ router.put(
     body('lastName').trim().notEmpty().withMessage('Le nom est requis.'),
     body('email').trim().isEmail().withMessage('Adresse e-mail invalide.'),
     body('role').optional().isString().withMessage('Le rôle est invalide.'),
-    body('status').optional().isIn(['active', 'pending', 'expired']).withMessage('Le statut est invalide.'),
+    body('status').optional().isIn(['active', 'pending', 'expired', 'disabled']).withMessage('Le statut est invalide.'),
   ],
   async (req, res) => {
     const errors = validationResult(req);
@@ -131,12 +200,22 @@ router.put(
       return res.status(403).json({ error: 'Seules les adresses e-mail du domaine autorisé peuvent être utilisées.' });
     }
 
+    const targetId = parseId(req.params.id);
+    if (!targetId) return res.status(400).json({ error: 'Compte invalide.' });
+
+    // Un superAdmin ne peut pas se retirer lui-même l'accès (rôle ou statut).
+    if (targetId === req.session.userId && ((role && normalizeRole(role) !== 'superAdmin') || (status && status !== 'active'))) {
+      return res.status(403).json({ error: 'Vous ne pouvez pas retirer vos propres droits ni désactiver votre propre compte.' });
+    }
+
     try {
       const duplicate = await pool.query(
         'SELECT id FROM users WHERE email = $1 AND id <> $2',
-        [normalizedEmail, req.params.id]
+        [normalizedEmail, targetId]
       );
       if (duplicate.rows.length > 0) return res.status(409).json({ error: 'Un compte existe déjà avec cette adresse e-mail.' });
+
+      const before = await pool.query('SELECT role FROM users WHERE id = $1', [targetId]);
 
       const result = await pool.query(
         `UPDATE users
@@ -144,11 +223,18 @@ router.put(
              role = COALESCE($4, role), status = COALESCE($5, status), updated_at = NOW()
          WHERE id = $6
          RETURNING id, first_name, last_name, email, role, status, created_at`,
-        [firstName.trim(), lastName.trim(), normalizedEmail, role ? normalizeRole(role) : null, status || null, req.params.id]
+        [firstName.trim(), lastName.trim(), normalizedEmail, role ? normalizeRole(role) : null, status || null, targetId]
       );
 
       if (result.rows.length === 0) return res.status(404).json({ error: 'Compte introuvable.' });
-      return res.json({ message: 'Compte modifié avec succès.', user: result.rows[0] });
+
+      // Statut ou rôle modifié : les sessions ouvertes portent l'ancien rôle,
+      // on les ferme pour que le changement soit immédiat.
+      const updated = result.rows[0];
+      if (updated.status !== 'active' || (before.rows[0] && before.rows[0].role !== updated.role)) {
+        await endSessionsOf(targetId);
+      }
+      return res.json({ message: 'Compte modifié avec succès.', user: updated });
     } catch (err) {
       console.error('[admin/update-user] Erreur :', err);
       return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
@@ -157,42 +243,51 @@ router.put(
 );
 
 // ---------------------------------------------------------------
-// DELETE /api/admin/users/:id — Supprimer un compte expiré
+// DELETE /api/admin/users/:id — Supprimer définitivement un compte
+//
+// Réservé au superAdmin, sur n'importe quel compte sauf le sien. La suppression
+// emporte les demandes du compte et leurs pièces jointes (clés étrangères en
+// cascade) ; les fichiers stockés sur le disque sont effacés aussi.
+// Pour simplement bloquer l'accès en conservant l'historique : désactiver.
 // ---------------------------------------------------------------
 router.delete('/users/:id', async (req, res) => {
+  const targetId = parseId(req.params.id);
+  if (!targetId) return res.status(400).json({ error: 'Compte invalide.' });
+  if (targetId === req.session.userId) {
+    return res.status(403).json({ error: 'Vous ne pouvez pas supprimer votre propre compte.' });
+  }
+
+  const client = await pool.connect();
   try {
-    const userResult = await pool.query(
-      `SELECT id, status, created_at FROM users WHERE id = $1`,
-      [req.params.id]
-    );
+    await client.query('BEGIN');
 
-    if (userResult.rows.length === 0) {
+    const found = await client.query('SELECT id, email FROM users WHERE id = $1 FOR UPDATE', [targetId]);
+    if (found.rows.length === 0) {
+      await client.query('ROLLBACK');
       return res.status(404).json({ error: 'Compte introuvable.' });
     }
 
-    const user = userResult.rows[0];
-    if (!isExpiredUser(user)) {
-      return res.status(403).json({
-        error: 'Seuls les comptes expirés ou en attente depuis plus de 30 jours peuvent être supprimés.',
-      });
-    }
+    const requests = await client.query('SELECT COUNT(*)::int AS n FROM requests WHERE user_id = $1', [targetId]);
+    const files = await client.query('SELECT stored_name FROM request_attachments WHERE user_id = $1', [targetId]);
+    await client.query('DELETE FROM users WHERE id = $1', [targetId]);
+    await client.query('COMMIT');
 
-    const deleteResult = await pool.query(
-      `DELETE FROM users WHERE id = $1 RETURNING id`,
-      [req.params.id]
-    );
+    files.rows.forEach((f) => removeFile(f.stored_name));
+    await endSessionsOf(targetId);
 
-    if (deleteResult.rows.length === 0) {
-      return res.status(404).json({ error: 'Compte introuvable.' });
-    }
-
-    return res.json({ message: 'Compte expiré supprimé avec succès.' });
+    console.log(`[admin] ${req.session.userEmail} a supprimé le compte ${found.rows[0].email} (${requests.rows[0].n} demande(s), ${files.rows.length} fichier(s)).`);
+    return res.json({
+      message: 'Compte supprimé.',
+      deletedRequests: requests.rows[0].n,
+    });
   } catch (err) {
+    await client.query('ROLLBACK').catch(() => {});
     console.error('[admin/delete-user] Erreur :', err);
     return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
+  } finally {
+    client.release();
   }
 });
-
 // ---------------------------------------------------------------
 // GET /api/admin/validators — Liste des valideurs
 // ---------------------------------------------------------------
