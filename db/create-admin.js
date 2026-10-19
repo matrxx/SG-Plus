@@ -9,7 +9,7 @@
 
 const readline = require('readline');
 const argon2 = require('argon2');
-const { query } = require('./pool');
+const { query, dbTarget } = require('./pool');
 
 const DEFAULT_PASSWORD = process.env.SUPERADMIN_PASSWORD;
 
@@ -48,6 +48,7 @@ async function ensureSuperAdminRole() {
 
 async function createAdmin() {
   console.log('\n=== Création du compte administrateur ===\n');
+  console.log(`Base de données ciblée : ${dbTarget()}\n`);
 
   try {
     const email = (process.argv[2] || '').trim().toLowerCase();
@@ -85,6 +86,7 @@ async function createAdmin() {
 
     console.log('\n[SUCCESS] Compte superAdmin créé !');
     console.log(`E-mail: ${email}`);
+    console.log(`Base: ${dbTarget()}`);
     console.log(`Nom: ${firstName} ${lastName}`);
     console.log('\n➡️  Conservez ce mot de passe dans un gestionnaire de secrets.');
 

@@ -1,10 +1,10 @@
 # Nestor-C2 — Portail de Services Internes
 
-> Un portail sécurisé pour la gestion des demandes internes (arrivées/départs, fournitures, etc.)
+> Un portail sécurisé pour la gestion des demandes internes (arrivées/départs, interventions techniques, accès aux sites, etc.)
 
 ## 📌 À propos
 
-**Nestor-C2** est une application web conçue pour les organisations souhaitant centraliser et simplifier la gestion des demandes internes. Elle permet aux agents de soumettre des formulaires (ex: arrivée/départ, commandes de fournitures) et aux valideurs de les traiter.
+**Nestor-C2** est une application web conçue pour les organisations souhaitant centraliser et simplifier la gestion des demandes internes. Elle permet aux agents de soumettre des formulaires (ex: arrivée/départ, intervention technique, demande de badge) et aux valideurs de les traiter.
 
 ### Fonctionnalités clés
 - ✅ **Authentification sécurisée** : Inscription avec vérification par e-mail, connexion par mot de passe (haché en Argon2id)
@@ -68,7 +68,7 @@ nano .env  # ou utilisez votre éditeur préféré
 # Applique les migrations de db/migrations/ non encore jouées
 npm run migrate
 ```
-> Les migrations sont versionnées et idempotentes : la commande peut être relancée à tout moment, y compris sur une base créée avec une ancienne version (elle ajoutera les tables et valeurs d'enum manquantes, dont le rôle `superAdmin` et les statuts du circuit de validation des dépenses).
+> Les migrations sont versionnées et idempotentes : la commande peut être relancée à tout moment, y compris sur une base créée avec une ancienne version (elle ajoutera les tables et valeurs d'enum manquantes, dont le rôle `superAdmin`).
 
 ### 5. Mise à jour d'une base existante
 Les anciennes commandes `npm run upgrade-superadmin` et `npm run upgrade-expense-validation` sont conservées comme alias de `npm run migrate`.
@@ -192,9 +192,6 @@ Nestor-C2/
 |---------|----------|-------------|
 | GET | `/api/requests` | Lister mes demandes |
 | POST | `/api/requests` | Créer une demande |
-| GET | `/api/requests/pending-validation` | Lister les dépenses à valider par le responsable connecté |
-| POST | `/api/requests/:id/validate-responsible` | Valider une dépense par signature électronique simple |
-| POST | `/api/requests/:id/transmit-budget` | Transmettre une dépense validée au service budget |
 | GET | `/api/requests/:id` | Détails d'une demande |
 | PUT | `/api/requests/:id` | Mettre à jour une demande |
 | DELETE | `/api/requests/:id` | Supprimer une demande (brouillon uniquement) |

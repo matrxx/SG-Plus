@@ -30,4 +30,15 @@ const query = async (text, params) => {
   }
 };
 
-module.exports = { pool, query };
+// Description lisible (sans mot de passe) de la base ciblée : permet de vérifier
+// que le serveur, create-admin et doctor parlent bien à la MÊME base.
+function dbTarget() {
+  try {
+    const u = new URL(process.env.DATABASE_URL);
+    return `${u.hostname}:${u.port || 5432}/${u.pathname.slice(1)} (utilisateur ${u.username})`;
+  } catch (e) {
+    return process.env.DATABASE_URL ? 'DATABASE_URL illisible' : 'DATABASE_URL absent';
+  }
+}
+
+module.exports = { pool, query, dbTarget };

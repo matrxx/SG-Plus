@@ -3,7 +3,7 @@
 //   npm run test-mail -- prenom.nom@culture.gouv.fr
 
 require('dotenv').config();
-const { pool } = require('../db/pool');
+const { pool, dbTarget } = require('../db/pool');
 const { checkSMTPConfig, verifySmtpConnection, sendTestEmail } = require('../utils/mailer');
 
 const results = [];
@@ -46,7 +46,7 @@ async function main() {
   // --- Base de données ------------------------------------------------
   try {
     await pool.query('SELECT 1');
-    report('ok', 'Connexion PostgreSQL');
+    report('ok', 'Connexion PostgreSQL', dbTarget());
     const t = await pool.query(
       `SELECT table_name FROM information_schema.tables WHERE table_schema = 'public'`
     );
@@ -69,6 +69,9 @@ async function main() {
       } else {
         report('ok', 'Comptes', u.rows.map((r) => `${r.n} ${r.role}/${r.status}${r.has_password ? '' : ' sans mot de passe'}`).join(', '));
       }
+      // Adresses exactes enregistrées (à comparer avec celle saisie à la connexion).
+      const emails = await pool.query(`SELECT email, role, status FROM users ORDER BY id LIMIT 20`);
+      emails.rows.forEach((r) => console.log(`       - ${r.email} (${r.role}, ${r.status})`));
     }
   } catch (err) {
     let target = 'DATABASE_URL absent';

@@ -268,13 +268,21 @@ function showUnauthenticatedUI() {
   selectTab('accueil'); // le prochain utilisateur repart toujours de l'accueil
 }
 
-// Le bouton "Administration" n'existe que pour un superAdmin ; la vue elle-même
-// ne s'affiche qu'au clic sur l'onglet (voir showAccueilTab).
+// Le bouton "Administration" existe pour un superAdmin (tout) et pour un admin
+// simple (liste des comptes, désactivation / réactivation seulement) ; la vue
+// elle-même ne s'affiche qu'au clic sur l'onglet (voir showAccueilTab).
+function isSuperAdminUser() {
+  return !!(currentUser && currentUser.role === 'superAdmin');
+}
+function isStaffUser() {
+  return !!(currentUser && (currentUser.role === 'superAdmin' || currentUser.role === 'admin'));
+}
+
 function setAdminPanelVisibility(forceVisible) {
   const toggle = document.getElementById('admin-panel-toggle');
   const panel = document.getElementById('admin-panel');
-  const isAdmin = !!(currentUser && currentUser.role === 'superAdmin');
-  const shouldShow = typeof forceVisible === 'boolean' ? forceVisible : isAdmin;
+  const staff = isStaffUser();
+  const shouldShow = typeof forceVisible === 'boolean' ? forceVisible : staff;
 
   if (toggle) toggle.style.display = shouldShow ? 'inline-flex' : 'none';
   if (!shouldShow) {
@@ -282,20 +290,37 @@ function setAdminPanelVisibility(forceVisible) {
     if (toggle) toggle.classList.remove('active');
   }
 
-  if (shouldShow && isAdmin) {
+  if (shouldShow && staff) {
+    // Un admin simple ne voit que les comptes : ni création, ni onglet Demandes.
+    const superAdmin = isSuperAdminUser();
+    const createCard = document.getElementById('admin-create-card');
+    const tabs = document.getElementById('admin-section-tabs');
+    const subtitle = document.getElementById('admin-panel-subtitle');
+    if (createCard) createCard.style.display = superAdmin ? '' : 'none';
+    if (tabs) tabs.style.display = superAdmin ? '' : 'none';
+    if (subtitle) subtitle.textContent = superAdmin ? 'Gestion des comptes et du traitement des demandes' : 'Gestion des comptes : désactivation et réactivation';
+    if (!superAdmin) {
+      // Vue "Comptes" uniquement (l'onglet Demandes pourrait être resté ouvert par un précédent superAdmin).
+      const usersSection = document.getElementById('admin-users-section');
+      const requestsSection = document.getElementById('admin-requests-section');
+      if (usersSection) usersSection.style.display = 'grid';
+      if (requestsSection) requestsSection.style.display = 'none';
+    }
     renderAdminUsers();
-    renderAdminRequests();
+    if (superAdmin) renderAdminRequests();
   }
 }
-
 function escapeHtml(value) {
   return String(value ?? '').replace(/[&<>'"]/g, character => ({
     '&': '&amp;', '<': '&lt;', '>': '&gt;', "'": '&#39;', '"': '&quot;'
   })[character]);
 }
 
+let adminUsersCache = [];
+
 async function renderAdminUsers() {
-  if (!currentUser || currentUser.role !== 'superAdmin') return;
+  if (!isStaffUser()) return;
+  const superAdmin = isSuperAdminUser();
 
   try {
     const response = await fetch('/api/admin/users');
@@ -309,6 +334,7 @@ async function renderAdminUsers() {
       return;
     }
 
+    adminUsersCache = data.users;
     if (data.users.length === 0) {
       list.innerHTML = '<div class="admin-empty-state">Aucun compte enregistré.</div>';
       return;
@@ -319,24 +345,35 @@ async function renderAdminUsers() {
       const roleClass = roleKey === 'validator' || roleKey === 'valideur' ? 'role-validator' : roleKey === 'admin' ? 'role-admin' : roleKey === 'superadmin' ? 'role-superadmin' : 'role-agent';
       const roleText = roleKey === 'validator' || roleKey === 'valideur' ? 'Valideur' : roleKey === 'admin' ? 'Admin' : roleKey === 'superadmin' ? 'SuperAdmin' : 'Agent';
       const statusKey = (user.status || 'active').toLowerCase();
-      const statusClass = statusKey === 'expired' ? 'status-expired' : statusKey === 'pending' ? 'status-pending' : 'status-active';
+      const statusClass = statusKey === 'expired' ? 'status-expired' : statusKey === 'pending' ? 'status-pending' : statusKey === 'disabled' ? 'status-disabled' : 'status-active';
+      const statusText = statusKey === 'expired' ? 'Expiré' : statusKey === 'pending' ? 'En attente' : statusKey === 'disabled' ? 'Désactivé' : 'Actif';
       const isExpired = !!user.is_expired;
-      const canDelete = isExpired || (user.status === 'pending' && user.created_at && new Date(user.created_at) < new Date(Date.now() - 30 * 24 * 60 * 60 * 1000));
+      const isSelf = !!currentUser && String(user.email).toLowerCase() === String(currentUser.email || '').toLowerCase();
+      // Admin simple : agents et valideurs uniquement. Jamais sur son propre compte.
+      const manageable = !isSelf && (superAdmin || roleKey === 'agent' || roleKey === 'validator' || roleKey === 'valideur');
+      const canToggle = manageable && (statusKey === 'active' || statusKey === 'disabled');
+      const canDelete = superAdmin && !isSelf;
 
       return `
         <div class="admin-user-item">
           <div class="admin-user-header">
             <div>
-              <div class="admin-user-name">${escapeHtml((user.first_name || '').trim() || '-')} ${escapeHtml((user.last_name || '').trim() || '')}</div>
+              <div class="admin-user-name">${escapeHtml((user.first_name || '').trim() || '-')} ${escapeHtml((user.last_name || '').trim() || '')}${isSelf ? ' <span class="admin-self">(vous)</span>' : ''}</div>
               <div class="admin-user-email">${escapeHtml(user.email)}</div>
             </div>
-            ${canDelete ? `<button class="admin-delete-btn" type="button" data-onclick="deleteAdminUser(${user.id})">Supprimer</button>` : ''}
+            <div class="admin-user-actions">
+              ${canToggle ? (statusKey === 'active'
+                ? `<button class="admin-toggle-btn" type="button" data-onclick="setAdminUserStatus(${Number(user.id)}, 'disabled')">Désactiver</button>`
+                : `<button class="admin-toggle-btn" type="button" data-onclick="setAdminUserStatus(${Number(user.id)}, 'active')">Réactiver</button>`) : ''}
+              ${canDelete ? `<button class="admin-delete-btn" type="button" data-onclick="deleteAdminUser(${Number(user.id)})">Supprimer</button>` : ''}
+            </div>
           </div>
           <div class="admin-user-meta">
             <span class="admin-badge ${roleClass}">${roleText}</span>
-            <span class="admin-badge ${statusClass}">${statusKey === 'expired' ? 'Expiré' : statusKey === 'pending' ? 'En attente' : 'Actif'}</span>
-            ${isExpired ? '<span class="admin-badge status-expired">Expiré</span>' : ''}
+            <span class="admin-badge ${statusClass}">${statusText}</span>
+            ${isExpired && statusKey !== 'expired' ? '<span class="admin-badge status-expired">Expiré</span>' : ''}
           </div>
+          ${superAdmin ? `
           <div class="admin-user-edit">
             <input type="text" id="admin-edit-firstname-${user.id}" value="${escapeHtml(user.first_name)}" aria-label="Prénom">
             <input type="text" id="admin-edit-lastname-${user.id}" value="${escapeHtml(user.last_name)}" aria-label="Nom">
@@ -351,12 +388,12 @@ async function renderAdminUsers() {
               <option value="active" ${statusKey === 'active' ? 'selected' : ''}>Actif</option>
               <option value="pending" ${statusKey === 'pending' ? 'selected' : ''}>En attente</option>
               <option value="expired" ${statusKey === 'expired' ? 'selected' : ''}>Expiré</option>
+              <option value="disabled" ${statusKey === 'disabled' ? 'selected' : ''}>Désactivé</option>
             </select>
-            <button class="admin-save-btn" type="button" data-onclick="saveAdminUser(${user.id})">Enregistrer les modifications</button>
-          </div>
+            <button class="admin-save-btn" type="button" data-onclick="saveAdminUser(${Number(user.id)})">Enregistrer les modifications</button>
+          </div>` : ''}
         </div>
-      `;
-    }).join('');
+      `;    }).join('');
   } catch (err) {
     console.error('[admin/users] Erreur de chargement :', err);
     const list = document.getElementById('admin-user-list');
@@ -511,19 +548,53 @@ function showAdminSection(section) {
 }
 
 function refreshAdminData() {
-  if (!currentUser || currentUser.role !== 'superAdmin') return;
+  if (!isStaffUser()) return;
   renderAdminUsers();
-  renderAdminRequests();
+  if (isSuperAdminUser()) renderAdminRequests();
 }
 
-async function deleteAdminUser(userId) {
-  if (!userId) return;
+// Désactiver / réactiver un compte (admin et superAdmin).
+async function setAdminUserStatus(userId, status) {
+  const user = adminUsersCache.find(u => Number(u.id) === Number(userId));
+  const label = user ? user.email : 'ce compte';
+  const question = status === 'disabled'
+    ? `Désactiver le compte ${label} ?\n\nLa personne sera déconnectée et ne pourra plus se connecter. Ses demandes sont conservées ; vous pourrez réactiver le compte à tout moment.`
+    : `Réactiver le compte ${label} ?`;
+  if (!window.confirm(question)) return;
 
-  const confirmed = window.confirm('Supprimer ce compte expiré ?');
+  try {
+    const response = await fetch(`/api/admin/users/${Number(userId)}/status`, {
+      method: 'PATCH',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ status }),
+    });
+    const data = await parseJsonResponse(response);
+    if (!response.ok) {
+      alert(data.error || 'Modification impossible.');
+      return;
+    }
+    await renderAdminUsers();
+  } catch (err) {
+    console.error('[admin/user-status] Erreur :', err);
+    alert('Erreur lors de la modification du compte.');
+  }
+}
+
+// Suppression définitive (superAdmin) : emporte les demandes du compte.
+async function deleteAdminUser(userId) {
+  if (!userId || !isSuperAdminUser()) return;
+
+  const user = adminUsersCache.find(u => Number(u.id) === Number(userId));
+  const label = user ? user.email : 'ce compte';
+  const count = user ? Number(user.request_count) || 0 : 0;
+  const consequence = count > 0
+    ? `Ses ${count} demande(s) et leurs pièces jointes seront aussi supprimées.`
+    : 'Ce compte n\'a aucune demande.';
+  const confirmed = window.confirm(`Supprimer DÉFINITIVEMENT le compte ${label} ?\n\n${consequence}\nCette action est irréversible. Pour seulement bloquer l'accès, utilisez « Désactiver ».`);
   if (!confirmed) return;
 
   try {
-    const response = await fetch(`/api/admin/users/${userId}`, { method: 'DELETE' });
+    const response = await fetch(`/api/admin/users/${Number(userId)}`, { method: 'DELETE' });
     const data = await parseJsonResponse(response);
 
     if (!response.ok) {
@@ -538,7 +609,6 @@ async function deleteAdminUser(userId) {
     alert('Erreur lors de la suppression.');
   }
 }
-
 function toggleAdminPanel() {
   const panel = document.getElementById('admin-panel');
   if (!panel) return;
@@ -1798,7 +1868,7 @@ function selectTab(tab) {
 
 // Clic sur un onglet de la navigation principale
 function showAccueilTab(tab) {
-  if (tab === 'admin' && (!currentUser || currentUser.role !== 'superAdmin')) tab = 'accueil';
+  if (tab === 'admin' && !isStaffUser()) tab = 'accueil';
   // Depuis un formulaire ouvert, un onglet ramène d'abord à l'accueil
   if (document.getElementById('screen-categorie').style.display === 'block') backToAccueil();
   selectTab(tab);

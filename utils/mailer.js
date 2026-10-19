@@ -188,23 +188,6 @@ async function sendPasswordSetupEmail(email, setupLink) {
   });
 }
 
-async function sendExpenseValidationEmail(email, firstName, request) {
-  const link = `${process.env.PUBLIC_BASE_URL}/`;
-  return sendMail({
-    to: email,
-    subject: `Demande de dépense à valider - ${request.reference}`,
-    devLink: link,
-    html: `
-      <h2>Demande de dépense à valider</h2>
-      <p>Bonjour ${escapeHtml(firstName)},</p>
-      <p>Une demande de dépense vous a été attribuée pour validation.</p>
-      <p><strong>${escapeHtml(request.title)}</strong><br>Référence : ${escapeHtml(request.reference)}</p>
-      <p>Connectez-vous au portail pour consulter la demande et apposer votre signature électronique simple :</p>
-      <p><a href="${escapeHtml(link)}">${escapeHtml(link)}</a></p>`,
-    text: `Bonjour ${firstName || ''},\n\nLa demande ${request.reference} (${request.title}) attend votre validation. Connectez-vous au portail : ${link}`,
-  });
-}
-
 async function sendTestEmail(to) {
   return sendMail({
     to,
@@ -221,7 +204,6 @@ module.exports = {
   sendVerificationEmail,
   sendPasswordResetEmail,
   sendPasswordSetupEmail,
-  sendExpenseValidationEmail,
   checkSMTPConfig,
   verifySmtpConnection,
 };
