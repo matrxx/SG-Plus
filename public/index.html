@@ -76,15 +76,7 @@
     <div id="suivi-tab-view" style="display:none;">
       <div class="page-head">
         <h1 class="page-title">Suivre mes demandes</h1>
-        <p class="page-sub">Retrouvez l'état de vos demandes et celles qui attendent votre validation</p>
-      </div>
-      <div class="suivi-section" id="validation-section" style="display:none;">
-        <h2 class="suivi-section-title">
-          <span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M12 7v5l3 2"/></svg></span>
-          Demandes en attente de validation
-        </h2>
-        <div id="validation-list"></div>
-        <div class="suivi-empty" id="validation-empty">Aucune demande de dépense ne vous attend.</div>
+        <p class="page-sub">Retrouvez l'état de vos demandes</p>
       </div>
       <div class="suivi-section">
         <h2 class="suivi-section-title">
@@ -104,21 +96,21 @@
       </div>
     </div>
 
-    <!-- Onglet : Administration (superAdmin) -->
+    <!-- Onglet : Administration (superAdmin ; admin : comptes seulement) -->
     <div id="admin-panel" style="display:none;">
       <div class="admin-panel-header">
         <div>
           <h1 class="admin-panel-title">Administration</h1>
-          <p class="admin-panel-subtitle">Gestion des comptes et du traitement des demandes</p>
+          <p class="admin-panel-subtitle" id="admin-panel-subtitle">Gestion des comptes et du traitement des demandes</p>
         </div>
         <button class="admin-refresh-btn" type="button" data-onclick="refreshAdminData()">Actualiser</button>
       </div>
-      <div class="admin-section-tabs">
+      <div class="admin-section-tabs" id="admin-section-tabs">
         <button class="admin-section-tab active" id="admin-section-users-tab" type="button" data-onclick="showAdminSection('users')">Comptes</button>
         <button class="admin-section-tab" id="admin-section-requests-tab" type="button" data-onclick="showAdminSection('requests')">Demandes</button>
       </div>
       <div class="admin-grid" id="admin-users-section">
-        <div class="admin-card">
+        <div class="admin-card" id="admin-create-card">
           <h2 class="admin-card-title">Créer un compte</h2>
           <form id="admin-create-user-form" class="admin-form">
             <div class="admin-field-row">
@@ -289,6 +281,7 @@
           <div class="success-box">
             <div class="success-icon pending"><span class="svg-icon"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 9l9-5 9 5v9H3z"/><path d="M3 9l9 5 9-5"/></svg></span></div>
             <h2 class="success-title">Vérifiez votre boîte mail</h2>
+            <p class="success-text"><strong>Une demande de création de compte a été envoyée.</strong></p>
             <p class="success-text">Si les conditions sont remplies, un e-mail de vérification a été envoyé à l'adresse fournie. Cliquez sur le lien qu'il contient pour activer votre compte.</p>
             <div class="simulate-row">
               <button type="button" class="btn-secondary" data-onclick="showLoginViewReal('signup')">Modifier l'e-mail</button>

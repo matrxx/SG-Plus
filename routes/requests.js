@@ -6,8 +6,6 @@ const express = require('express');
 const { body, validationResult } = require('express-validator');
 const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/requireAuth');
-const { sendExpenseValidationEmail } = require('../utils/mailer');
-const { isAllowedDomain } = require('../utils/emailDomain');
 const { getForm, validateSubmission } = require('../lib/forms');
 const { notifyRequest } = require('../lib/requestMail');
 const { extensionOf } = require('../utils/uploads');
@@ -68,13 +66,6 @@ router.post(
       return res.status(400).json({ error: formErrors[0], errors: formErrors });
     }
 
-    const isExpenseRequest = categoryKey === 'budget' && formKey === 'proposition_depenses';
-    const responsibleEmail = isExpenseRequest ? String(clean['1-field-5'] || '').toLowerCase() : '';
-    if (isExpenseRequest && !isAllowedDomain(responsibleEmail)) {
-      return res.status(403).json({ error: 'Le responsable valideur doit avoir une adresse e-mail du domaine autorisé.' });
-    }
-    const initialStatus = isExpenseRequest ? 'en_attente_validation' : 'en_cours';
-
     const client = await pool.connect();
     try {
       await client.query('BEGIN');
@@ -123,7 +114,7 @@ router.post(
           const inserted = await client.query(
             `INSERT INTO requests (user_id, reference, category_key, form_key, title, data, status)
              VALUES ($1, $2, $3, $4, $5, $6, $7) RETURNING *`,
-            [req.session.userId, reference, categoryKey, formKey, form.title, clean, initialStatus]
+            [req.session.userId, reference, categoryKey, formKey, form.title, clean, 'en_cours']
           );
           request = inserted.rows[0];
         } catch (err) {
@@ -143,23 +134,7 @@ router.post(
       // fait jamais perdre la demande, il est consigné et peut être renvoyé).
       let notification;
       try {
-        if (isExpenseRequest) {
-          const sent = await sendExpenseValidationEmail(
-            responsibleEmail,
-            String(clean['1-field-4'] || ''),
-            request
-          );
-          notification = sent ? 'sent' : 'failed';
-          await pool.query(
-            `UPDATE requests
-                SET notification_status = $1, notification_recipients = $2,
-                    notified_at = CASE WHEN $4::boolean THEN NOW() ELSE NULL END
-              WHERE id = $3`,
-            [notification, responsibleEmail, request.id, sent]
-          );
-        } else {
-          notification = (await notifyRequest(request.id)).status;
-        }
+        notification = (await notifyRequest(request.id)).status;
       } catch (err) {
         // La demande est enregistrée : un incident de notification ne doit pas
         // la transformer en erreur pour l'utilisateur (renvoi possible par l'admin).
@@ -180,26 +155,6 @@ router.post(
 );
 
 // ---------------------------------------------------------------
-// GET /api/requests/pending-validation — Demandes attribuées au responsable
-// ---------------------------------------------------------------
-router.get('/pending-validation', requireAuth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `SELECT id, reference, title, category_key, form_key, status, data, created_at, updated_at
-       FROM requests
-      WHERE status IN ('en_attente_validation', 'validee_responsable')
-         AND LOWER(COALESCE(data->>'1-field-5', '')) = LOWER($1)
-       ORDER BY created_at DESC`,
-      [req.session.userEmail]
-    );
-    return res.json({ requests: result.rows });
-  } catch (err) {
-    console.error('[requests/pending-validation] Erreur :', err);
-    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-  }
-});
-
-// ---------------------------------------------------------------
 // GET /api/requests/:id — Détails d'une demande
 // ---------------------------------------------------------------
 router.get('/:id', requireAuth, async (req, res) => {
@@ -213,54 +168,6 @@ router.get('/:id', requireAuth, async (req, res) => {
     return res.json({ request: result.rows[0] });
   } catch (err) {
     console.error('[requests/details] Erreur :', err);
-    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-  }
-});
-
-// ---------------------------------------------------------------
-// POST /api/requests/:id/validate-responsible — Signature électronique simple
-// ---------------------------------------------------------------
-router.post('/:id/validate-responsible', requireAuth, async (req, res) => {
-  try {
-    if (req.body.signatureAccepted !== true) {
-      return res.status(400).json({ error: 'La confirmation de signature est requise.' });
-    }
-
-    const result = await pool.query(
-      `UPDATE requests
-       SET status = 'validee_responsable', validator_id = $1, validated_at = NOW(), updated_at = NOW()
-       WHERE id = $2 AND status = 'en_attente_validation'
-         AND LOWER(COALESCE(data->>'1-field-5', '')) = LOWER($3)
-       RETURNING *`,
-      [req.session.userId, req.params.id, req.session.userEmail]
-    );
-
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Demande introuvable ou déjà validée.' });
-    return res.json({ message: 'Demande validée par signature électronique simple.', request: result.rows[0] });
-  } catch (err) {
-    console.error('[requests/validate-responsible] Erreur :', err);
-    return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
-  }
-});
-
-// ---------------------------------------------------------------
-// POST /api/requests/:id/transmit-budget — Transmission au service budget
-// ---------------------------------------------------------------
-router.post('/:id/transmit-budget', requireAuth, async (req, res) => {
-  try {
-    const result = await pool.query(
-      `UPDATE requests
-       SET status = 'transmise_budget', updated_at = NOW()
-       WHERE id = $1 AND status = 'validee_responsable'
-         AND (user_id = $2 OR LOWER(COALESCE(data->>'1-field-5', '')) = LOWER($3))
-       RETURNING *`,
-      [req.params.id, req.session.userId, req.session.userEmail]
-    );
-
-    if (result.rows.length === 0) return res.status(404).json({ error: 'Demande introuvable ou non validée.' });
-    return res.json({ message: 'Demande transmise au service budget.', request: result.rows[0] });
-  } catch (err) {
-    console.error('[requests/transmit-budget] Erreur :', err);
     return res.status(500).json({ error: 'Une erreur est survenue, veuillez réessayer.' });
   }
 });

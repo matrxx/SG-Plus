@@ -9,7 +9,7 @@ const helmet = require('helmet');
 const rateLimit = require('express-rate-limit');
 const path = require('path');
 
-const { pool } = require('./db/pool');
+const { pool, dbTarget } = require('./db/pool');
 const { verifySmtpConnection } = require('./utils/mailer');
 const { restrictToLan } = require('./middleware/restrictToLan');
 const authRoutes = require('./routes/auth');
@@ -187,6 +187,11 @@ const useHttps = process.env.USE_HTTPS === 'true';
 async function ensureDatabase() {
   try {
     await pool.query('SELECT 1');
+    // Affiche la base réellement utilisée et le nombre de comptes : une connexion
+    // qui échoue avec "aucun compte" vient presque toujours d'une base différente
+    // de celle où le compte a été créé.
+    const users = await pool.query('SELECT COUNT(*)::int AS n FROM users').then((r) => r.rows[0].n).catch(() => null);
+    console.log(`[DB] Base utilisée : ${dbTarget()} — ${users === null ? 'table users absente (npm run migrate ?)' : users + ' compte(s)'}`);
   } catch (err) {
     let target = 'DATABASE_URL absent';
     try {
