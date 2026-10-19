@@ -12,6 +12,7 @@
     "create-admin": "node db/create-admin.js",
     "dev-db": "node scripts/dev-db.js",
     "doctor": "node scripts/doctor.js",
+    "update": "bash scripts/update.sh",
     "test-mail": "node scripts/doctor.js --mail",
     "generate-cert": "bash generate-self-signed-cert.sh"
   },
