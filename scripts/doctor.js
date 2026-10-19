@@ -21,7 +21,7 @@ async function main() {
     ? process.argv[process.argv.indexOf('--mail') + 1]
     : null;
 
-  console.log('=== Diagnostic Nestor-C2 ===\n');
+  console.log('=== Diagnostic SG+ ===\n');
 
   // --- Variables d'environnement -------------------------------------
   const secret = process.env.SESSION_SECRET || '';

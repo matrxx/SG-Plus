@@ -49,6 +49,7 @@ const ROUTES = {
   'menage/menage_general': (a) => a.technique,
   'menage/menage_non_fait': (a) => a.technique,
   'vehicule/reservation': (a) => a.technique,
+  'vehicule/acces_vehicule': (a) => (a.acces.length ? a.acces : a.technique),
   'equipements-bureau/mobilier_standard': (a) => (a.equipements.length ? a.equipements : a.defaut),
   'equipements-bureau/equip_specifiques': (a) => (a.equipements.length ? a.equipements : a.defaut),
   'acces-sites/acces_valise': (a) => (a.acces.length ? a.acces : a.defaut),

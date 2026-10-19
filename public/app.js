@@ -207,10 +207,10 @@ async function readApiJson(response) {
 
 function describeApiError(err, fallback) {
   if (err && err.message === 'API_UNREACHABLE') {
-    return "Le serveur Nestor-C2 ne répond pas à cette adresse. Ouvrez l'application via le serveur Node (par défaut http://localhost:3000) et non via un autre serveur web.";
+    return "Le serveur SG+ ne répond pas à cette adresse. Ouvrez l'application via le serveur Node (par défaut http://localhost:3000) et non via un autre serveur web.";
   }
   if (err instanceof TypeError) {
-    return "Impossible de joindre le serveur Nestor-C2. Vérifiez qu'il est démarré (npm start) et que vous utilisez la bonne adresse.";
+    return "Impossible de joindre le serveur SG+. Vérifiez qu'il est démarré (npm start) et que vous utilisez la bonne adresse.";
   }
   return fallback;
 }

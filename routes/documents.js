@@ -59,7 +59,7 @@ async function prepare(req, res, formats) {
   }
 
   return {
-    ctx: { category: found.category, form: found.form, requester: rows[0] },
+    ctx: { category: found.category, form: found.form, requester: rows[0], data: clean },
     sections: describeSubmission(found.form, clean),
   };
 }
@@ -116,10 +116,10 @@ router.post('/forms/:category/:form/document/send', requireAuth, sendLimiter, as
         `<h2 style="margin:0 0 12px;">${escapeHtml(form.title)}</h2>` +
         `<p>${escapeHtml(who)} (${escapeHtml(requester.email)}) vous transmet la fiche « ${escapeHtml(form.title)} » complétée, ` +
         `en pièce jointe${files.length > 1 ? ' (PDF et Word)' : ''}.</p>` +
-        `<p style="font-size:12px;color:#777;">Message envoyé depuis le portail Nestor-C2. Répondre à cet e-mail écrit directement à ${escapeHtml(who)}.</p>`,
+        `<p style="font-size:12px;color:#777;">Message envoyé depuis le portail SG+. Répondre à cet e-mail écrit directement à ${escapeHtml(who)}.</p>`,
       text:
         `${who} (${requester.email}) vous transmet la fiche « ${form.title} » complétée, en pièce jointe.\n\n` +
-        `Message envoyé depuis le portail Nestor-C2. Répondre à cet e-mail écrit directement à ${who}.`,
+        `Message envoyé depuis le portail SG+. Répondre à cet e-mail écrit directement à ${who}.`,
       headers: { 'X-Nestor-Document': `${req.params.category}/${req.params.form}` },
       attachments: files.map((f) => ({ filename: f.filename, content: f.buffer, contentType: f.contentType })),
     });

@@ -34,7 +34,7 @@ const transporter = nodemailer.createTransport({
 // partagée, droit Send As requis) sont deux adresses différentes.
 function getFromHeader() {
   const address = process.env.SMTP_FROM || process.env.SMTP_USER;
-  const name = process.env.SMTP_FROM_NAME || 'Nestor-C2';
+  const name = process.env.SMTP_FROM_NAME || 'SG+';
   return { name, address };
 }
 
@@ -146,7 +146,7 @@ async function sendVerificationEmail(email, firstName, verificationLink) {
   const duration = formatDuration(EMAIL_VERIFICATION_TTL_HOURS);
   return sendMail({
     to: email,
-    subject: 'Vérifiez votre adresse e-mail - Nestor-C2',
+    subject: 'Vérifiez votre adresse e-mail - SG+',
     devLink: verificationLink,
     html: `
       <h2>Vérifiez votre adresse e-mail</h2>
@@ -162,7 +162,7 @@ async function sendPasswordResetEmail(email, resetLink) {
   const duration = formatDuration(PASSWORD_RESET_TTL_HOURS);
   return sendMail({
     to: email,
-    subject: 'Réinitialisation de votre mot de passe - Nestor-C2',
+    subject: 'Réinitialisation de votre mot de passe - SG+',
     devLink: resetLink,
     html: `
       <h2>Réinitialisation du mot de passe</h2>
@@ -177,11 +177,11 @@ async function sendPasswordSetupEmail(email, setupLink) {
   const duration = formatDuration(PASSWORD_SETUP_TTL_HOURS);
   return sendMail({
     to: email,
-    subject: 'Activation de votre compte valideur - Nestor-C2',
+    subject: 'Activation de votre compte valideur - SG+',
     devLink: setupLink,
     html: `
       <h2>Activation de votre compte</h2>
-      <p>Un compte valideur a été créé pour vous sur le portail Nestor-C2.</p>
+      <p>Un compte valideur a été créé pour vous sur le portail SG+.</p>
       ${buttonHtml(setupLink, 'Définir mon mot de passe')}
       <p>Ce lien expirera dans ${duration}.</p>`,
     text: `Un compte valideur a été créé pour vous. Définissez votre mot de passe : ${setupLink}\n\nCe lien expirera dans ${duration}.`,
@@ -191,9 +191,9 @@ async function sendPasswordSetupEmail(email, setupLink) {
 async function sendTestEmail(to) {
   return sendMail({
     to,
-    subject: 'Test d’envoi - Nestor-C2',
-    html: '<h2>Test d’envoi</h2><p>Si vous lisez ce message, la configuration SMTP de Nestor-C2 fonctionne.</p>',
-    text: 'Si vous lisez ce message, la configuration SMTP de Nestor-C2 fonctionne.',
+    subject: 'Test d’envoi - SG+',
+    html: '<h2>Test d’envoi</h2><p>Si vous lisez ce message, la configuration SMTP de SG+ fonctionne.</p>',
+    text: 'Si vous lisez ce message, la configuration SMTP de SG+ fonctionne.',
   });
 }
 

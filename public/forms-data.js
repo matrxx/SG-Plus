@@ -144,6 +144,19 @@ return {
     forms: {
       reservation: { title: "Réservation de véhicule seul", ref: "VEH", icon: 'car', steps: [
         { label: "Votre demande", title: "Réservation de véhicule seul", desc: "Renseignez les détails de votre réservation", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Date et heure de départ", req:true},{label:"Date et heure de retour", req:true},{label:"Motif du déplacement"}] }
+      ]},
+      // Fiche officielle « Demande d'accès véhicule » : le document Word fourni
+      // (templates/acces-vehicule.docx) est complété avec ces champs ; le PDF en
+      // reproduit la mise en page (lib/documents.js). Les libellés des champs et
+      // des cases servent de clés de correspondance : ne pas les renommer sans
+      // adapter lib/documents.js.
+      acces_vehicule: { title: "Demande d'accès véhicule", ref: "DAV", icon: 'truck', documentTemplate: 'acces-vehicule', documents: ['docx', 'pdf'], steps: [
+        { label: "Demandeur", title: "Demandeur", desc: "Département : Secrétariat Général / Administration", type: 'fields', fields: [{label:"Demandeur", req:true},{label:"Téléphone mobile"},{label:"Téléphone bureau"},{label:"Date de la demande", req:true, type:'date'}] },
+        { label: "Intervention", title: "Intervention", desc: "Renseignez la société, le véhicule et le rendez-vous", type: 'fields', fields: [{label:"Nom de la société", req:true},{label:"Immatriculation du véhicule", req:true},{label:"Date de l'intervention", req:true, type:'date'},{label:"Durée"},{label:"Heure de rendez-vous", type:'time'},{label:"Porte accès du véhicule"}] },
+        { label: "Types d'intervention", title: "Types d'intervention", desc: "Cochez le ou les types d'intervention", type: 'checklist', items: ["Maintenance", "Prises de vue", "Livraison d'œuvres", "Autres", "Travaux", "Visite", "Livraison"] },
+        { label: "Espaces concernés", title: "Espaces concernés", desc: "Cochez le ou les espaces concernés", type: 'checklist', items: ["Laboratoire par saut du loup", "Pavillon de Flore par porte Jaujard", "Laboratoire par VDI", "Pavillon de Flore par VDI"] },
+        { label: "Intervenants et validation", title: "Intervenants et validation", desc: "Listez les intervenants (un par ligne) puis indiquez qui valide la demande", type: 'fields', fields: [{label:"Liste des intervenants", type:'textarea'},{label:"Validé par"},{label:"Date de validation", type:'date'}] },
+        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif, téléchargez la fiche (Word ou PDF) puis envoyez la demande", type: 'summary' }
       ]}
     }
   },
