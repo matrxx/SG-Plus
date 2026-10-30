@@ -14,6 +14,9 @@
   // Listes fermées partagées par plusieurs formulaires.
   const SITES_FLORE_CARROUSEL = ['Flore', 'Carrousel'];
   const SITES_LOUVRE_FLORE = ['Louvre Carrousel', 'Flore'];
+  // Site concerné par une demande d'accès : repris dans l'objet de l'e-mail (Paris / Versailles)
+  // pour que la réception puisse trier avec des règles (propriété `subjectField` du formulaire).
+  const SITES_PARIS_VERSAILLES = ['Paris', 'Versailles'];
   // PROVISOIRE : remplacer par la liste réelle des monte-charges du site.
   const EQUIPEMENTS_ELEVATION = ['Ascenseur', 'Monte-charge 1', 'Monte-charge 2', 'Monte-charge 3'];
 
@@ -82,25 +85,25 @@ return {
   'acces-sites': {
     title: 'Accès aux sites',
     forms: {
-      badge: { title: "Badge", ref: "BAD", icon: 'badge', steps: [
-        { label: "Votre demande", title: "Badge", desc: "Indiquez le type de demande et vos coordonnées", type: 'mixed', radio: {label:"Type de demande", req:true, options:["Demande de badge","Modification de badge","Perte de badge"]}, fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
+      badge: { title: "Badge", ref: "BAD", icon: 'badge', subjectField: 'Site', steps: [
+        { label: "Votre demande", title: "Badge", desc: "Indiquez le type de demande et vos coordonnées", type: 'mixed', radio: {label:"Type de demande", req:true, options:["Demande de badge","Modification de badge","Perte de badge"]}, fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Site", req:true, options: SITES_PARIS_VERSAILLES}] },
         { label: "Demande de badge", title: "Demande de badge", desc: "Précisez le badge souhaité", when: {step:1, radio:"Demande de badge"}, type: 'fields', fields: [{label:"Fonction", req:true},{label:"Espaces à accéder", req:true, type:'textarea'},{label:"Précisions complémentaires", type:'textarea'}] },
         { label: "Modification de badge", title: "Modification de badge", desc: "Précisez les changements à apporter (demande transmise aux RH)", when: {step:1, radio:"Modification de badge"}, type: 'fields', fields: [{label:"Numéro de badge"},{label:"Nouveau service / fonction"},{label:"Espaces à accéder", req:true, type:'textarea'},{label:"Justification", req:true, type:'textarea'}] },
         { label: "Perte de badge", title: "Déclaration de perte du badge", desc: "Précisez les circonstances (déclaration transmise aux RH et à l'accueil)", when: {step:1, radio:"Perte de badge"}, type: 'fields', fields: [{label:"Date de la perte", req:true, type:'date'},{label:"Circonstances", type:'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
-      acces_valise: { title: "Demande accès valise pour externes", ref: "AVE", icon: 'userPlus', steps: [
-        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true}] },
+      acces_valise: { title: "Demande accès valise pour externes", ref: "AVE", icon: 'userPlus', subjectField: 'Site', steps: [
+        { label: "Identité du demandeur", title: "Identité du demandeur", desc: "Renseignez vos coordonnées", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Service / direction", req:true},{label:"Site", req:true, options: SITES_PARIS_VERSAILLES}] },
         { label: "Les personnes externes", title: "Les personnes externes", desc: "Identifiez les personnes extérieures concernées", type: 'fields', fields: [{label:"Nombre de personnes externes", req:true},{label:"Noms et sociétés des personnes externes", req:true, type:'textarea'}] },
         { label: "Détail de la demande", title: "Détail de la demande", desc: "Précisez la période et les espaces concernés", type: 'fields', fields: [{label:"Date et heure d'arrivée", req:true},{label:"Date et heure de départ", req:true},{label:"Espaces à accéder", req:true},{label:"Motif", req:true, type:'textarea'}] },
         { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
       ]},
       arrivee_externe: { title: "Arrivée externe", ref: "AEE", icon: 'doorEnter', externalUrl: 'https://app.proxyclick.com/default', steps: [] },
-      cle_bureau: { title: "Clés", ref: "CLE", icon: 'key', steps: [
-        { label: "Votre demande", title: "Clés", desc: "Renseignez votre demande", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Numéro de bureau"},{label:"Espace concerné", req:true},{label:"Motif / descriptif du besoin", req:true, type:'textarea'}] }
+      cle_bureau: { title: "Clés", ref: "CLE", icon: 'key', subjectField: 'Site', steps: [
+        { label: "Votre demande", title: "Clés", desc: "Renseignez votre demande", type: 'fields', fields: [{label:"Prénom", req:true},{label:"Nom", req:true},{label:"Numéro de bureau"},{label:"Espace concerné", req:true},{label:"Motif / descriptif du besoin", req:true, type:'textarea'},{label:"Site", req:true, options: SITES_PARIS_VERSAILLES}] }
       ]},
-      acces_prestataire: { title: "Autorisation d'accès prestataire ou autre personne extérieure", ref: "APR", icon: 'userPlus', steps: [
-        { label: "Votre demande", title: "Votre demande", desc: "Décrivez le contexte de l'intervention", type: 'fields', fields: [{label:"Prénom du demandeur", req:true},{label:"Nom du demandeur", req:true},{label:"Date(s) d'intervention", req:true},{label:"Motif de l'accès", req:true}] },
+      acces_prestataire: { title: "Autorisation d'accès prestataire ou autre personne extérieure", ref: "APR", icon: 'userPlus', subjectField: 'Site', steps: [
+        { label: "Votre demande", title: "Votre demande", desc: "Décrivez le contexte de l'intervention", type: 'fields', fields: [{label:"Prénom du demandeur", req:true},{label:"Nom du demandeur", req:true},{label:"Date(s) d'intervention", req:true},{label:"Motif de l'accès", req:true},{label:"Site", req:true, options: SITES_PARIS_VERSAILLES}] },
         { label: "Les intervenants", title: "Les intervenants", desc: "Identité des personnes externes concernées", type: 'fields', fields: [{label:"Nom complet intervenant 1", req:true},{label:"Société", req:true},{label:"Nom complet intervenant 2 (optionnel)"}] }
       ]}
     }

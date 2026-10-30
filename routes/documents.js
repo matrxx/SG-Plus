@@ -15,6 +15,7 @@ const { pool } = require('../db/pool');
 const { requireAuth } = require('../middleware/requireAuth');
 const { getForm, validateSubmission, describeSubmission } = require('../lib/forms');
 const { generateDocument } = require('../lib/documents');
+const { buildSubject } = require('../lib/requestMail');
 const { sendEmail, escapeHtml } = require('../utils/mailer');
 
 const router = express.Router();
@@ -110,7 +111,7 @@ router.post('/forms/:category/:form/document/send', requireAuth, sendLimiter, as
 
     const result = await sendEmail({
       to,
-      subject: `${category.title} - ${form.title}`.replace(/[\r\n]+/g, ' '),
+      subject: buildSubject(category, form, ctx.data),
       replyTo: requester.email,
       html:
         `<h2 style="margin:0 0 12px;">${escapeHtml(form.title)}</h2>` +
