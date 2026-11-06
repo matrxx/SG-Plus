@@ -17,6 +17,14 @@
   // Site concerné par une demande d'accès : repris dans l'objet de l'e-mail (Paris / Versailles)
   // pour que la réception puisse trier avec des règles (propriété `subjectField` du formulaire).
   const SITES_PARIS_VERSAILLES = ['Paris', 'Versailles'];
+  // Listes du PDF « Demande de badge d'identification » (textes identiques à ceux du PDF).
+  const BADGE_TYPES = ['Initiale', 'Prolongation', 'Modification'];
+  const BADGE_FLORE = ["PAS D'ACCES", 'C2RMF FLORE 8h25 - 18h00 LV', 'C2RMF TOTAL 24-24 / 7-7'];
+  const BADGE_LABO = ["PAS D'ACCES", 'C2RMF LABO 8h00 - 20h00 LV', 'C2RMF LABO + VDI 8h00 - 20h00 LV', 'C2RMF LABO 24-24 / 7-7', 'C2RMF TOTAL 24-24 / 7-7'];
+  const BADGE_CIRCULATIONS = ['C2RMF FLORE TOUS ATELIERS', 'C2RMF FLORE ARTS DECO', 'C2RMF FLORE ARTS GRAPH', 'C2RMF FLORE PEINTURE', 'C2RMF FLORE ARCHEO', 'C2RMF FLORE SCULPTURE', 'C2RMF FLORE BUREAUX RDC', 'C2RMF FLORE VEST SURV', 'C2RMF LOCAUX TECHNIQUES', 'C2RMF LABO TGBT', 'C2RMF LABO AGLAE', 'C2RMF FLORE LOCAL SYNDICAL (54N213)'];
+  const BADGE_CATEGORIES = ['Personnel C2RMF', 'Restaurateur(trice)', 'Doctorant & stagiaires', 'Prestataire', 'Autre'];
+  const BADGE_DEPARTEMENTS = ['Direction', 'Secrétariat général', 'Recherche', 'Restauration', 'Restauration & recherche', "Archives et nouvelles technologies de l'information", 'Conservation préventive'];
+  const BADGE_FILIERES = ['Archéologie', 'Arts décoratifs', 'Arts graphiques', 'Peinture', 'Sculpture'];
   // PROVISOIRE : remplacer par la liste réelle des monte-charges du site.
   const EQUIPEMENTS_ELEVATION = ['Ascenseur', 'Monte-charge 1', 'Monte-charge 2', 'Monte-charge 3'];
 
@@ -28,16 +36,43 @@ return {
         title: "Arrivée d'un nouvel agent",
         ref: "ARR",
         icon: 'doorEnter',
+        // Le PDF « Demande de badge » est complété avec l'étape « Demande de badge » :
+        // téléchargeable à la validation, et joint à l'e-mail de la demande.
+        documentTemplate: 'demande-badge',
+        documentName: "Demande de badge",
+        documents: ['pdf'],
+        attachToMail: ['pdf'],
         steps: [
           { label: "Pré-requis à la demande d'installation", title: "Pré-requis à la demande d'installation", desc: "Avant de commencer, confirmez les éléments suivants", type: 'checklist', items: ["La date d'arrivée de l'agent est confirmée par le service RH", "Le poste de travail (bureau) est identifié et disponible", "Le responsable hiérarchique de l'agent est informé"] },
           { label: "Informations sur l'agent concerné", title: "Informations sur l'agent concerné", desc: "Renseignez l'identité du nouvel agent", type: 'fields', fields: [{label:"Prénom", req:true}, {label:"Nom", req:true}, {label:"E-mail", req:true, type:'email'}, {label:"Date d'arrivée", req:true, type:'date'}, {label:"Service / direction", req:true}, {label:"Fonction"}] },
-          { label: "Contexte de l'arrivée", title: "Contexte de l'arrivée", desc: "Précisez le type de contrat et la localisation", type: 'mixed', radio: { label: "Type de contrat", req: true, options: ["Fonctionnaire", "Contractuel", "Stage / alternance", "Vacataire"] }, fields: [{ label: "Site / bâtiment", req: true, options: ["Paris Carrousel", "Paris Flore", "Versailles aile Paris", "Versailles aile Sceaux"] }, { label: "Numéro de bureau" }] },
+          { label: "Contexte de l'arrivée", title: "Contexte de l'arrivée", desc: "Précisez le type de contrat et la localisation", type: 'mixed', radio: { label: "Type de contrat", req: true, options: ["Fonctionnaire", "Contractuel", "Stagiaire", "Apprenti", "Doctorant", "Post Doctorant", "Vacataire"] }, fields: [{ label: "Site Principal", req: true, options: ["Paris Carrousel", "Paris Flore", "Versailles aile Paris", "Versailles aile Sceaux"] }, { label: "Préciser si la personne doit travailler sur les 2 sites" }, { label: "Numéro de bureau ou Emplacement/Dénomination" }] },
           { label: "Mobilier", title: "Mobilier", desc: "Sélectionnez les éléments à installer", type: 'checklist', items: ["Bureau", "Chaise ergonomique", "Caisson de rangement", "Armoire", "Porte-manteau"] },
           { label: "Poste de travail informatique", title: "Poste de travail informatique", desc: "Sélectionnez le type d'ordinateur et les accessoires nécessaires", type: 'mixed', radio: { label: "Type d'ordinateur", req: true, options: ["Ordinateur portable MCC", "Ordinateur fixe", "Déjà existant", "Ordinateur mutualisé"] }, fields: [{ label: "Autre précision" }] },
           { label: "Équipements informatiques nécessaires", title: "Équipements informatiques nécessaires", desc: "Choisissez les équipements à installer", type: 'checklist', items: ["Écran spécifique", "Double écran", "Souris ergonomique", "Casque audio"] },
           { label: "Droits d'accès aux dossiers sur le réseau", title: "Droits d'accès aux dossiers sur le réseau", desc: "Sélectionnez les accès requis", type: 'checklist', items: ["Profil direction", "Profil Secrétariat général", "Profil Recherche", "Profil Restauration", "Profil Régie", "CoDir", "Pas d'accès"] },
           { label: "Téléphonie fixe", title: "Téléphonie fixe", desc: "Configuration de la ligne téléphonique", type: 'mixed', radio: { label: "Type de ligne", req: true, options: ["Poste fixe individuel", "Ligne partagée", "Aucune"] }, fields: [{ label: "Numéro à transférer (si remplacement)" }] },
           { label: "Téléphonie mobile", title: "Téléphonie mobile", desc: "Configuration de la ligne mobile", type: 'mixed', radio: { label: "Type de ligne", req: true, options: ["Nouveau mobile", "Récupération mobile existant", "Aucune"] }, fields: [{ label: "Numéro à récupérer (si repris de l'existant)" }] },
+          // Les champs et les listes de cette étape reprennent ceux du PDF « Demande de badge
+          // d'identification » (templates/demande-badge.pdf). Nom et prénom viennent de l'étape 2.
+          // Les libellés servent de clés de correspondance dans lib/demandeBadgeDocument.js.
+          { label: "Demande de badge", title: "Demande de badge d'identification", desc: "Le nom et le prénom sont repris de l'étape « Informations sur l'agent concerné »", type: 'fields', fields: [
+            { label: "Type de demande", req: true, options: BADGE_TYPES },
+            { label: "Date de fin de validité", type: 'date' },
+            { label: "Accès Flore", req: true, options: BADGE_FLORE },
+            { label: "Accès Laboratoire", req: true, options: BADGE_LABO },
+            { label: "Circulation intérieure 1", options: BADGE_CIRCULATIONS },
+            { label: "Circulation intérieure 2", options: BADGE_CIRCULATIONS },
+            { label: "Circulation intérieure 3", options: BADGE_CIRCULATIONS },
+            { label: "Circulation intérieure 4", options: BADGE_CIRCULATIONS },
+            { label: "Circulation intérieure 5", options: BADGE_CIRCULATIONS },
+            { label: "Circulation intérieure 6", options: BADGE_CIRCULATIONS },
+            { label: "Catégorie de la personne", req: true, options: BADGE_CATEGORIES },
+            { label: "Département (si Personnel C2RMF)", options: BADGE_DEPARTEMENTS },
+            { label: "Filière (si Restaurateur(trice))", options: BADGE_FILIERES },
+            { label: "Référent (si Doctorant & stagiaires)" },
+            { label: "Société (si Prestataire)" },
+            { label: "À préciser (si Autre)" }
+          ] },
           { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
         ]
       },

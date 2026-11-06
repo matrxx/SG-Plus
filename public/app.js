@@ -1727,8 +1727,8 @@ function renderSummaryHtml() {
   if (Array.isArray(form.documents) && form.documents.length) {
     const names = { pdf: 'PDF', docx: 'Word' };
     html += `<div class="wz-summary-section doc-panel">
-      <div class="wz-summary-title">Document complété</div>
-      <p class="wz-hint">Téléchargez la fiche remplie avec les informations ci-dessus.</p>
+      <div class="wz-summary-title">Document complété${form.documentName ? ' : ' + escapeHtml(form.documentName) : ''}</div>
+      <p class="wz-hint">Téléchargez ${form.documentName ? 'le document « ' + escapeHtml(form.documentName) + ' »' : 'la fiche'} rempli${form.documentName ? '' : 'e'} avec les informations ci-dessus.</p>
       <div class="doc-actions">
         ${form.documents.map((f) => `<button type="button" class="wz-btn-ghost" data-onclick="downloadDocument('${f}')">Télécharger en ${names[f] || f}</button>`).join('')}
       </div>
