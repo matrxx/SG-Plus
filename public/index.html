@@ -1,4 +1,4 @@
-﻿<!DOCTYPE html>
+<!DOCTYPE html>
 <html lang="fr">
 <head>
 <meta charset="UTF-8"/>
@@ -186,12 +186,12 @@
           </div>
           <div class="cartes-legend" aria-hidden="true">
             <span><i class="cb-sample is-free"></i>Disponible</span>
-            <span><i class="cb-sample is-busy"></i>Indisponible</span>
+            <span><i class="cb-sample is-busy"></i><span id="cartes-legend-busy">Indisponible</span></span>
             <span><i class="cb-sample is-mine"></i>Ma réservation</span>
             <span><i class="cb-sample is-closed"></i>Fermé (week-end, férié)</span>
           </div>
           <div class="cartes-board-scroll" id="cartes-board" role="region" aria-label="Tableau des disponibilités des cartes" tabindex="0"></div>
-          <p class="wz-hint">Le tableau est anonyme : une carte réservée apparaît simplement comme indisponible. Cliquez sur un jour disponible pour choisir vos dates.</p>
+          <p class="wz-hint" id="cartes-board-note">Le tableau est anonyme : une carte réservée apparaît simplement comme indisponible. Cliquez sur un jour disponible pour choisir vos dates.</p>
         </section>
 
         <aside class="cartes-side">
@@ -233,7 +233,7 @@
 
       <section class="cartes-card cartes-manage" id="cartes-manage" style="display:none;" aria-labelledby="cartes-manage-title">
         <h2 class="cartes-card-title" id="cartes-manage-title">Gestion RH / SG</h2>
-        <p class="wz-hint">Cette section n'est visible que des RH, du SG et des superAdmin. Elle est la seule à afficher le nom des emprunteurs.</p>
+        <p class="wz-hint">Cette section et le nom des emprunteurs dans le tableau ne sont visibles que des RH, du SG et des superAdmin.</p>
         <div class="cartes-manage-grid">
           <div>
             <h3 class="cartes-sub-title">Cartes</h3>

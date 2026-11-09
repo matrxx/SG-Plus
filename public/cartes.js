@@ -66,15 +66,33 @@
     }).join('');
 
     const rows = b.cards.map((card) => {
-      const cells = b.days.map((d) => {
+      const cellList = [];
+      for (let i = 0; i < b.days.length; i++) {
+        const d = b.days[i];
+
+        // Gestionnaire (RH / SG) : une réservation est un seul bloc, au nom de l'emprunteur
+        // (week-ends compris : la carte reste empruntée). L'API ne renvoie ce nom qu'à eux.
+        const held = b.canManage ? (card.busy || []).find((x) => x.start <= d.date && x.end >= d.date) : null;
+        if (held && held.borrower) {
+          let j = i;
+          while (j + 1 < b.days.length && b.days[j + 1].date <= held.end) j++;
+          const who = `${held.borrower.firstName} ${held.borrower.lastName}`.trim();
+          const title = `${card.label} : ${who} (${held.borrower.email}), du ${frShort(held.start)} au ${frShort(held.end)}`;
+          cellList.push(`<td class="cb-cell cb-span ${held.mine ? 'is-mine' : 'is-busy'}" colspan="${j - i + 1}" title="${esc(title)}" aria-label="${esc(title)}"><span class="cb-name">${esc(who)}</span></td>`);
+          i = j;
+          continue;
+        }
+
         const st = cellState(card, d, b.today);
         const isToday = d.date === b.today ? ' is-today' : '';
         const title = `${card.label}, ${frLong(d.date)} : ${st.label}`;
         if (st.cls === 'is-free') {
-          return `<td class="cb-cell is-free${isToday}"><button type="button" class="cb-btn" title="${esc(title)}" aria-label="${esc(title)}" data-onclick="cartesPick('${esc(card.kind)}', '${esc(d.date)}')"></button></td>`;
+          cellList.push(`<td class="cb-cell is-free${isToday}"><button type="button" class="cb-btn" title="${esc(title)}" aria-label="${esc(title)}" data-onclick="cartesPick('${esc(card.kind)}', '${esc(d.date)}')"></button></td>`);
+        } else {
+          cellList.push(`<td class="cb-cell ${st.cls}${isToday}" title="${esc(title)}" aria-label="${esc(title)}"></td>`);
         }
-        return `<td class="cb-cell ${st.cls}${isToday}" title="${esc(title)}" aria-label="${esc(title)}"></td>`;
-      }).join('');
+      }
+      const cells = cellList.join('');
       const off = card.active ? '' : ' <span class="cb-off">(désactivée)</span>';
       return `<tr><th scope="row" class="cb-card"><span class="cb-kind">${esc(card.kind)}</span> ${esc(card.label)}${off}</th>${cells}</tr>`;
     }).join('');
@@ -114,6 +132,15 @@
     const kindSel = document.getElementById('cartes-kind');
     if (kindSel && kindSel.options.length === 0) {
       kindSel.innerHTML = data.kinds.map((k) => `<option value="${esc(k)}">${esc(k)}</option>`).join('');
+    }
+    // Légende et note : un gestionnaire voit les noms, les autres seulement « indisponible »
+    const legendBusy = document.getElementById('cartes-legend-busy');
+    const note = document.getElementById('cartes-board-note');
+    if (legendBusy) legendBusy.textContent = data.canManage ? 'Réservée (nom de l\'emprunteur)' : 'Indisponible';
+    if (note) {
+      note.textContent = data.canManage
+        ? 'En tant que RH / SG, vous voyez qui a emprunté chaque carte (survolez un bloc pour l\'e-mail et les dates). Les autres agents voient seulement « indisponible ». Cliquez sur un jour disponible pour choisir des dates.'
+        : 'Le tableau est anonyme : une carte réservée apparaît simplement comme indisponible. Cliquez sur un jour disponible pour choisir vos dates.';
     }
     renderBoard();
     const manage = document.getElementById('cartes-manage');

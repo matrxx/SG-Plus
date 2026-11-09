@@ -3,10 +3,11 @@
 //  Tout compte connecté peut consulter le tableau et réserver.
 //  Les rôles RH, SG et superAdmin gèrent les cartes (/manage/...).
 //
-//  ANONYMAT : le tableau (GET /board) ne contient JAMAIS l'identité de l'emprunteur,
-//  ni son identifiant : une réservation d'un autre agent apparaît seulement comme
-//  « indisponible ». Seules les réservations de l'utilisateur connecté sont marquées
-//  « mine ». L'identité n'est visible que dans l'écran de gestion RH / SG.
+//  ANONYMAT : pour un agent, le tableau (GET /board) ne contient JAMAIS l'identité de
+//  l'emprunteur, ni son identifiant : une réservation d'un autre agent apparaît
+//  seulement comme « indisponible ». Seules les réservations de l'utilisateur
+//  connecté sont marquées « mine ». Les gestionnaires (RH, SG, superAdmin) voient en
+//  plus le nom de l'emprunteur, dans le tableau et dans l'écran de gestion, pour le suivi.
 
 const express = require('express');
 const { pool } = require('../db/pool');
@@ -74,11 +75,13 @@ router.get('/board', async (req, res) => {
     )).rows;
 
     // user_id sert UNIQUEMENT à calculer « mine » : il n'est jamais renvoyé.
+    // Le nom de l'emprunteur n'est lu et renvoyé que pour un gestionnaire (RH, SG, superAdmin).
     const busy = (await pool.query(
-      `SELECT id, card_id, user_id, ${D('start_date')} AS start_date, ${D('end_date')} AS end_date
-         FROM card_reservations
-        WHERE status = 'active' AND start_date <= $2::date AND end_date >= $1::date
-        ORDER BY start_date`,
+      `SELECT r.id, r.card_id, r.user_id, ${D('r.start_date')} AS start_date, ${D('r.end_date')} AS end_date,
+              u.first_name, u.last_name, u.email
+         FROM card_reservations r JOIN users u ON u.id = r.user_id
+        WHERE r.status = 'active' AND r.start_date <= $2::date AND r.end_date >= $1::date
+        ORDER BY r.start_date`,
       [from, to]
     )).rows;
 
@@ -87,6 +90,7 @@ router.get('/board', async (req, res) => {
       const mine = b.user_id === req.session.userId;
       const entry = { start: b.start_date, end: b.end_date, mine };
       if (mine) entry.reservationId = b.id;
+      if (manager) entry.borrower = { firstName: b.first_name, lastName: b.last_name, email: b.email };
       if (!byCard.has(b.card_id)) byCard.set(b.card_id, []);
       byCard.get(b.card_id).push(entry);
     }
