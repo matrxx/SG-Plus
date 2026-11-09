@@ -255,6 +255,7 @@ function showAuthenticatedUI() {
   document.getElementById('screen-accueil').style.display = 'block';
   document.getElementById('app-header').style.display = 'block';
   renderHeaderUser();
+  moveNavIndicator(false);
   setAdminPanelVisibility();
 }
 
@@ -265,7 +266,7 @@ function showUnauthenticatedUI() {
   document.getElementById('screen-categorie').style.display = 'none';
   document.getElementById('app-header').style.display = 'none';
   setAdminPanelVisibility(false);
-  selectTab('accueil'); // le prochain utilisateur repart toujours de l'accueil
+  selectTab('accueil', { instant: true }); // le prochain utilisateur repart toujours de l'accueil
 }
 
 // Le bouton "Administration" existe pour un superAdmin (tout) et pour un admin
@@ -872,6 +873,7 @@ function openForm(formKey) {
 
   document.getElementById('menu-view').style.display = 'none';
   document.getElementById('wizard-view').style.display = 'block';
+  animateIn(document.getElementById('wizard-view'));
 
   const cat = categoryForms[currentCategoryKey];
   const form = cat.forms[formKey];
@@ -902,6 +904,7 @@ function heroBack() {
 
 // Retour au menu
 function backToMenu() {
+  animateIn(document.getElementById('menu-view'));
   document.getElementById('menu-view').style.display = 'block';
   document.getElementById('wizard-view').style.display = 'none';
   const cat = categoryForms[currentCategoryKey];
@@ -1361,6 +1364,7 @@ function renderStepContent(stepIdx) {
 function showStep(n) {
   const form = getCurrentForm();
   document.getElementById('wz-main').innerHTML = renderStepContent(n);
+  animateIn(document.getElementById('wz-main'));
   window.scrollTo(0, 0); // chaque étape commence en haut, titre visible sous l'en-tête
   document.getElementById('wz-footer').style.display = 'flex';
   // Le bouton a pu rester désactivé par un envoi précédent (submitForm)
@@ -1847,28 +1851,83 @@ function showScreen(name, btn) {
   }
 
   const target = document.getElementById('screen-' + name);
+  const wasShown = !!target && target.style.display === 'block';
   if (target) target.style.display = 'block';
+  if (target && !wasShown) animateIn(target);
   if (name === 'accueil') setAdminPanelVisibility();
   window.scrollTo(0, 0); // un nouvel écran s'ouvre toujours en haut de page
 }
 
-// Afficher un onglet de l'accueil (compatibilité)
-// Active un onglet (accueil | suivi | admin) : bouton + vue, sans appel réseau
-function selectTab(tab) {
+// -----------------------------------------------------------------------------
+// Transitions entre pages
+//
+// Entrée : la nouvelle vue apparaît en fondu avec un léger glissement ; sortie : la
+// vue quittée s'efface juste avant. Désactivé pour les personnes qui ont demandé
+// « réduire les animations » dans leur système. L'état d'affichage (display) reste
+// géré comme avant : les animations ne font que l'habiller.
+// -----------------------------------------------------------------------------
+const reducedMotion = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+const LEAVE_MS = 120;
+
+function animateIn(el) {
+  if (!el || reducedMotion()) return;
+  el.classList.remove('view-enter');
+  void el.offsetWidth; // relance l'animation même si la vue vient d'être animée
+  el.classList.add('view-enter');
+  el.addEventListener('animationend', () => el.classList.remove('view-enter'), { once: true });
+}
+
+// Soulignement de l'onglet actif : il glisse d'un onglet à l'autre
+function moveNavIndicator(animate) {
+  const bar = document.getElementById('nav-indicator');
+  const active = document.querySelector('.nav-tab.active');
+  if (!bar || !active || active.offsetWidth === 0) return;
+  if (!animate || reducedMotion()) bar.style.transition = 'none';
+  bar.style.width = active.offsetWidth + 'px';
+  bar.style.transform = `translateX(${active.offsetLeft}px)`;
+  if (!animate || reducedMotion()) { void bar.offsetWidth; bar.style.transition = ''; }
+  bar.style.opacity = '1';
+}
+window.addEventListener('resize', () => moveNavIndicator(false));
+
+// Active un onglet (accueil | suivi | cartes | admin) : bouton + vue, sans appel réseau.
+// `after` s'exécute quand la vue est affichée (ses dimensions sont alors connues).
+let tabSwapToken = 0;
+function selectTab(tab, opts = {}) {
   const views = { accueil: 'accueil-tab-view', suivi: 'suivi-tab-view', cartes: 'cartes-panel', admin: 'admin-panel' };
   const buttons = { accueil: 'tab-accueil', suivi: 'tab-suivi', cartes: 'tab-cartes', admin: 'admin-panel-toggle' };
-  // L'onglet Cartes occupe toute la largeur de la fenêtre (tableau plus lisible) ; les autres gardent la mise en page standard.
-  document.body.classList.toggle('is-wide', tab === 'cartes');
-  Object.keys(views).forEach((key) => {
-    const view = document.getElementById(views[key]);
+
+  // Retour visuel immédiat sur les boutons
+  Object.keys(buttons).forEach((key) => {
     const button = document.getElementById(buttons[key]);
-    if (view) view.style.display = key === tab ? 'block' : 'none';
-    if (button) {
-      button.classList.toggle('active', key === tab);
-      if (key === tab) button.setAttribute('aria-current', 'page');
-      else button.removeAttribute('aria-current');
-    }
+    if (!button) return;
+    button.classList.toggle('active', key === tab);
+    if (key === tab) button.setAttribute('aria-current', 'page');
+    else button.removeAttribute('aria-current');
   });
+  moveNavIndicator(!opts.instant);
+
+  const next = document.getElementById(views[tab]);
+  const others = Object.keys(views).filter((k) => k !== tab).map((k) => document.getElementById(views[k])).filter(Boolean);
+  const leaving = others.find((el) => el.style.display === 'block');
+  const wasVisible = !!next && next.style.display === 'block';
+  const token = ++tabSwapToken;
+
+  const show = () => {
+    Object.keys(views).forEach((key) => {
+      const view = document.getElementById(views[key]);
+      if (view) view.style.display = key === tab ? 'block' : 'none';
+    });
+    if (!wasVisible && !opts.instant) animateIn(next);
+    if (opts.after) opts.after();
+  };
+
+  if (opts.instant || !leaving || reducedMotion()) { show(); return; }
+  leaving.classList.add('view-leave');
+  setTimeout(() => {
+    leaving.classList.remove('view-leave');
+    if (token === tabSwapToken) show(); // un clic plus récent a pris le relais
+  }, LEAVE_MS);
 }
 
 // Clic sur un onglet de la navigation principale
@@ -1876,13 +1935,15 @@ function showAccueilTab(tab) {
   if (tab === 'admin' && !isStaffUser()) tab = 'accueil';
   // Depuis un formulaire ouvert, un onglet ramène d'abord à l'accueil
   if (document.getElementById('screen-categorie').style.display === 'block') backToAccueil();
-  selectTab(tab);
-  if (tab === 'suivi') renderSuiviLists();
-  if (tab === 'cartes' && typeof openCartesTab === 'function') openCartesTab();
-  if (tab === 'admin') refreshAdminData();
-  window.scrollTo(0, 0);
+  selectTab(tab, {
+    after: () => {
+      if (tab === 'suivi') renderSuiviLists();
+      if (tab === 'cartes' && typeof openCartesTab === 'function') openCartesTab();
+      if (tab === 'admin') refreshAdminData();
+      window.scrollTo(0, 0);
+    },
+  });
 }
-
 // Afficher une vue de connexion (compatibilité)
 function showLoginView(name) {
   document.querySelectorAll('.login-view').forEach(v => v.classList.remove('active'));

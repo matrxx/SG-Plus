@@ -113,7 +113,8 @@ a { color: var(--accent); }
   transition: color .12s, border-color .12s; display: inline-flex; align-items: center;
 }
 .nav-tab:hover { color: var(--ink); border-bottom-color: var(--line-strong); }
-.nav-tab.active { color: var(--accent); font-weight: 600; border-bottom-color: var(--accent); }
+/* Épaisseur sans changer la largeur : passer en gras élargirait l'onglet et décalerait ses voisins à chaque changement de page. */
+.nav-tab.active { color: var(--accent); -webkit-text-stroke: .35px currentColor; border-bottom-color: transparent; }
 
 /* Pages -------------------------------------------------------------------- */
 .page { max-width: var(--page-width); margin: 0 auto; padding: 36px 32px 56px; }
@@ -625,8 +626,7 @@ select.wz-input {
 .cartes-side .wz-input { width: 100%; min-width: 0; }
 .cartes-manage .wz-hint { margin-bottom: 18px; }
 
-/* --- Cartes : page pleine largeur (usage bureautique) --------------------- */
-body.is-wide { --page-width: 2400px; }
+/* --- Cartes : seul le tableau s'étend sur toute la largeur (l'en-tête et la page restent fixes) --- */
 .cartes-layout { grid-template-columns: minmax(0, 1fr); }
 .cartes-side { grid-template-columns: minmax(340px, 460px) minmax(320px, 1fr); align-items: start; }
 .cartes-board { table-layout: fixed; }
@@ -640,3 +640,30 @@ body.is-wide { --page-width: 2400px; }
 /* --- Cartes : bloc nominatif visible des RH / SG --------------------------- */
 .cartes-board .cb-span { padding: 0 8px; vertical-align: middle; text-align: left; color: #fff; font-size: 12.5px; font-weight: 600; }
 .cartes-board .cb-span .cb-name { display: block; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+
+.cartes-board-card {
+  position: relative; left: 50%; transform: translateX(-50%);
+  width: calc(100vw - var(--sbw, 0px) - 64px); max-width: 2400px;
+}
+@media (max-width: 1160px) { .cartes-board-card { left: 0; transform: none; width: auto; } }
+
+/* ============================================================================
+   Transitions entre pages
+   ========================================================================== */
+@keyframes viewIn { from { opacity: 0; transform: translateY(14px); } to { opacity: 1; transform: none; } }
+@keyframes viewOut { from { opacity: 1; transform: none; } to { opacity: 0; transform: translateY(-6px); } }
+.view-enter { animation: viewIn .34s cubic-bezier(.22, .61, .36, 1) both; }
+.view-leave { animation: viewOut .12s ease-in both; pointer-events: none; }
+
+/* Soulignement de l'onglet actif : il glisse d'un onglet à l'autre */
+.nav-tabs-inner { position: relative; }
+.nav-indicator {
+  position: absolute; left: 0; bottom: 0; height: 3px; width: 0; background: var(--accent);
+  opacity: 0; transition: transform .32s cubic-bezier(.4, 0, .2, 1), width .32s cubic-bezier(.4, 0, .2, 1);
+}
+.nav-tab.active, .nav-tab.active:hover { border-bottom-color: transparent; }
+
+@media (prefers-reduced-motion: reduce) {
+  .view-enter, .view-leave { animation: none; }
+  .nav-indicator { transition: none; }
+}

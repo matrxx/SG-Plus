@@ -351,7 +351,14 @@
     updateForm();
   }
 
+  // Largeur de la barre de défilement de la page : le tableau pleine largeur en tient compte
+  function measureScrollbar() {
+    document.documentElement.style.setProperty('--sbw', (window.innerWidth - document.documentElement.clientWidth) + 'px');
+  }
+  window.addEventListener('resize', measureScrollbar);
+
   async function open() {
+    measureScrollbar();
     try {
       await refresh();
       state.loaded = true;

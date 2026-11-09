@@ -36,6 +36,7 @@
       <button type="button" class="nav-tab" id="tab-suivi" data-onclick="showAccueilTab('suivi')">Suivre mes demandes</button>
       <button type="button" class="nav-tab" id="tab-cartes" data-onclick="showAccueilTab('cartes')">Cartes ICOM</button>
       <button type="button" class="nav-tab" id="admin-panel-toggle" style="display:none;" data-onclick="showAccueilTab('admin')">Administration</button>
+      <span class="nav-indicator" id="nav-indicator" aria-hidden="true"></span>
     </div>
   </nav>
 </header>
@@ -175,7 +176,7 @@
       </div>
 
       <div class="cartes-layout">
-        <section class="cartes-card" aria-labelledby="cartes-board-title">
+        <section class="cartes-card cartes-board-card" aria-labelledby="cartes-board-title">
           <div class="cartes-board-head">
             <h2 class="cartes-card-title" id="cartes-board-title">Disponibilités</h2>
             <div class="cartes-nav">
