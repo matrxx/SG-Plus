@@ -596,11 +596,7 @@ select.wz-input {
 /* sélection en cours : retrait (R), restitution (D) et jours entre les deux */
 .cartes-board .cb-cell.is-sel-range { background: var(--accent-tint); box-shadow: inset 0 2px 0 var(--accent), inset 0 -2px 0 var(--accent); }
 .cartes-board .cb-cell.is-sel-start, .cartes-board .cb-cell.is-sel-end { background: var(--accent); box-shadow: none; }
-.cartes-board .cb-cell.is-sel-start::after, .cartes-board .cb-cell.is-sel-end::after { content: "\25B6"; position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; color: #fff; font-size: 12px; font-weight: 700; pointer-events: none; animation: selPop .22s ease-out; }
-.cartes-board .cb-cell.is-sel-end::after { content: "\25A0"; }
 .cb-sample.is-sel { background: var(--accent); }
-@keyframes selPop { from { transform: scale(.6); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-@media (prefers-reduced-motion: reduce) { .cartes-board .cb-cell.is-sel-start::after, .cartes-board .cb-cell.is-sel-end::after { animation: none; } }
 .cartes-board .cb-cell.is-sel-start .cb-btn:hover, .cartes-board .cb-cell.is-sel-end .cb-btn:hover { background: transparent; }
 .cartes-board .cb-btn { position: absolute; inset: 0; width: 100%; height: 100%; background: transparent; border: 0; cursor: pointer; border-radius: 0; }
 .cartes-board .cb-btn:hover { background: var(--accent-tint); box-shadow: inset 0 0 0 2px var(--accent); }
