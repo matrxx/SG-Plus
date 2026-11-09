@@ -8,7 +8,8 @@
   const DAY_LETTERS = ['D', 'L', 'M', 'M', 'J', 'V', 'S'];
   const MONTHS = ['janv.', 'févr.', 'mars', 'avr.', 'mai', 'juin', 'juil.', 'août', 'sept.', 'oct.', 'nov.', 'déc.'];
 
-  const state = { from: null, board: null, mine: [], manage: null, loaded: false };
+  const CARD_COL = 190; // largeur de la colonne des noms de cartes (px)
+  const state = { from: null, board: null, mine: [], manage: null, loaded: false, weeks: 0 };
 
   // ------------------------------------------------------------ dates (AAAA-MM-JJ, sans fuseau)
   const toDate = (s) => new Date(s + 'T12:00:00Z');
@@ -78,13 +79,22 @@
       return `<tr><th scope="row" class="cb-card"><span class="cb-kind">${esc(card.kind)}</span> ${esc(card.label)}${off}</th>${cells}</tr>`;
     }).join('');
 
-    host.innerHTML = `<table class="cartes-board">
+    host.innerHTML = `<table class="cartes-board" style="min-width:${CARD_COL + b.days.length * 26}px">
       <thead><tr><th class="cb-corner" rowspan="2" scope="col">Carte</th>${head1}</tr><tr>${head2}</tr></thead>
       <tbody>${rows}</tbody></table>`;
   }
 
+  // Nombre de semaines affichées : autant que la largeur le permet (colonnes d'au moins ~34 px), de 4 à 8.
+  function autoWeeks() {
+    const host = document.getElementById('cartes-board');
+    const width = host ? host.clientWidth : 0;
+    if (!width) return 4;
+    return Math.max(4, Math.min(8, Math.floor((width - CARD_COL) / 34 / 7)));
+  }
+
   async function loadBoard() {
-    const { ok, data } = await api('/board' + (state.from ? `?from=${state.from}&weeks=4` : '?weeks=4'));
+    const weeks = autoWeeks();
+    const { ok, data } = await api('/board' + (state.from ? `?from=${state.from}&weeks=${weeks}` : `?weeks=${weeks}`));
     if (!ok) {
       const host = document.getElementById('cartes-board');
       if (host) host.innerHTML = '<div class="admin-empty-state">Impossible de charger le tableau.</div>';
@@ -92,6 +102,7 @@
     }
     state.board = data;
     state.from = data.from;
+    state.weeks = data.days.length / 7;
 
     const rules = document.getElementById('cartes-rules');
     if (rules) {
@@ -338,6 +349,15 @@
     say('cartes-msg', ''); say('cartes-manage-msg', '');
     const m = document.getElementById('cartes-manage'); if (m) m.style.display = 'none';
   }
+
+  let resizeTimer = null;
+  window.addEventListener('resize', () => {
+    clearTimeout(resizeTimer);
+    resizeTimer = setTimeout(() => {
+      const panel = document.getElementById('cartes-panel');
+      if (state.board && panel && panel.style.display !== 'none' && autoWeeks() !== state.weeks) loadBoard();
+    }, 250);
+  });
 
   Object.assign(window, {
     openCartesTab: open,

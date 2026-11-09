@@ -1857,6 +1857,8 @@ function showScreen(name, btn) {
 function selectTab(tab) {
   const views = { accueil: 'accueil-tab-view', suivi: 'suivi-tab-view', cartes: 'cartes-panel', admin: 'admin-panel' };
   const buttons = { accueil: 'tab-accueil', suivi: 'tab-suivi', cartes: 'tab-cartes', admin: 'admin-panel-toggle' };
+  // L'onglet Cartes occupe toute la largeur de la fenêtre (tableau plus lisible) ; les autres gardent la mise en page standard.
+  document.body.classList.toggle('is-wide', tab === 'cartes');
   Object.keys(views).forEach((key) => {
     const view = document.getElementById(views[key]);
     const button = document.getElementById(buttons[key]);

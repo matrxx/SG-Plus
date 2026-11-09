@@ -624,3 +624,16 @@ select.wz-input {
 .cartes-dates .wz-field { min-width: 0; }
 .cartes-side .wz-input { width: 100%; min-width: 0; }
 .cartes-manage .wz-hint { margin-bottom: 18px; }
+
+/* --- Cartes : page pleine largeur (usage bureautique) --------------------- */
+body.is-wide { --page-width: 2400px; }
+.cartes-layout { grid-template-columns: minmax(0, 1fr); }
+.cartes-side { grid-template-columns: minmax(340px, 460px) minmax(320px, 1fr); align-items: start; }
+.cartes-board { table-layout: fixed; }
+.cartes-board .cb-corner, .cartes-board .cb-card { width: 190px; min-width: 190px; max-width: 190px; overflow: hidden; text-overflow: ellipsis; }
+.cartes-board .cb-day, .cartes-board .cb-cell { min-width: 0; }
+.cartes-board .cb-cell { height: 40px; }
+.cartes-board .cb-card { height: 40px; }
+@media (max-width: 980px) {
+  .cartes-side { grid-template-columns: 1fr; }
+}
