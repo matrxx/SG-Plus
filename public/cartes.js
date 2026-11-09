@@ -87,19 +87,42 @@
         const isToday = d.date === b.today ? ' is-today' : '';
         const title = `${card.label}, ${frLong(d.date)} : ${st.label}`;
         if (st.cls === 'is-free') {
-          cellList.push(`<td class="cb-cell is-free${isToday}"><button type="button" class="cb-btn" title="${esc(title)}" aria-label="${esc(title)}" data-onclick="cartesPick('${esc(card.kind)}', '${esc(d.date)}')"></button></td>`);
+          cellList.push(`<td class="cb-cell is-free${isToday}" data-date="${esc(d.date)}"><button type="button" class="cb-btn" title="${esc(title)}" aria-label="${esc(title)}" data-onclick="cartesPick('${esc(card.kind)}', '${esc(d.date)}', this)"></button></td>`);
         } else {
           cellList.push(`<td class="cb-cell ${st.cls}${isToday}" title="${esc(title)}" aria-label="${esc(title)}"></td>`);
         }
       }
       const cells = cellList.join('');
       const off = card.active ? '' : ' <span class="cb-off">(désactivée)</span>';
-      return `<tr><th scope="row" class="cb-card"><span class="cb-kind">${esc(card.kind)}</span> ${esc(card.label)}${off}</th>${cells}</tr>`;
+      return `<tr data-kind="${esc(card.kind)}" data-card="${esc(card.label)}"><th scope="row" class="cb-card"><span class="cb-kind">${esc(card.kind)}</span> ${esc(card.label)}${off}</th>${cells}</tr>`;
     }).join('');
 
     host.innerHTML = `<table class="cartes-board" style="min-width:${CARD_COL + b.days.length * 26}px">
       <thead><tr><th class="cb-corner" rowspan="2" scope="col">Carte</th>${head1}</tr><tr>${head2}</tr></thead>
       <tbody>${rows}</tbody></table>`;
+    applySelection();
+  }
+
+  // Met en évidence sur le tableau le jour de retrait, le jour de restitution et la période entre les deux
+  function applySelection() {
+    const host = document.getElementById('cartes-board');
+    const kindSel = document.getElementById('cartes-kind');
+    if (!host || !kindSel) return;
+    const start = document.getElementById('cartes-start').value;
+    const end = document.getElementById('cartes-end').value;
+    host.querySelectorAll('.is-sel-start, .is-sel-end, .is-sel-range').forEach((el) => el.classList.remove('is-sel-start', 'is-sel-end', 'is-sel-range'));
+    if (!start) return;
+    host.querySelectorAll('tr[data-kind]').forEach((tr) => {
+      if (tr.dataset.kind !== kindSel.value) return;
+      // la carte précise cliquée si on la connaît, sinon toutes les cartes du type choisi
+      if (state.pickedCard && state.pickedKind === kindSel.value && tr.dataset.card !== state.pickedCard) return;
+      tr.querySelectorAll('td[data-date]').forEach((td) => {
+        const d = td.dataset.date;
+        if (d === start) td.classList.add('is-sel-start');
+        else if (end && d === end) td.classList.add('is-sel-end');
+        else if (end && d > start && d < end) td.classList.add('is-sel-range');
+      });
+    });
   }
 
   // Nombre de semaines affichées : autant que la largeur le permet (colonnes d'au moins ~34 px), de 4 à 8.
@@ -189,6 +212,7 @@
 
   // Aide à la saisie : durée, motif exigé au-delà d'une semaine (le serveur contrôle tout)
   function updateForm() {
+    applySelection();
     const rules = state.board && state.board.rules;
     const { startDate, endDate } = formValues();
     const field = document.getElementById('cartes-reason-field');
@@ -210,7 +234,10 @@
   }
 
   // Clic sur un jour libre du tableau : 1er clic = retrait, 2e clic = restitution
-  function pick(kind, date) {
+  function pick(kind, date, srcEl) {
+    const tr = srcEl && srcEl.closest ? srcEl.closest('tr') : null;
+    state.pickedCard = tr ? tr.dataset.card : '';
+    state.pickedKind = kind;
     const kindSel = document.getElementById('cartes-kind');
     const start = document.getElementById('cartes-start');
     const end = document.getElementById('cartes-end');
@@ -399,7 +426,7 @@
     cartesShiftWeeks: shiftWeeks,
     cartesGoToday: goToday,
     cartesPick: pick,
-    cartesFormChanged: updateForm,
+    cartesFormChanged: () => { state.pickedCard = ''; updateForm(); },
     cartesReserve: reserve,
     cartesCancel: (id) => closeReservation('cancel', id),
     cartesReturn: (id) => closeReservation('return', id),
