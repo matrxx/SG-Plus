@@ -28,6 +28,7 @@ function normalizeRole(role) {
   const value = (role || 'agent').toLowerCase();
   if (value === 'superadmin') return 'superAdmin';
   if (value === 'admin' || value === 'administrateur') return 'admin';
+  if (value === 'rh' || value === 'sg') return value; // gestionnaires des cartes ICOM / ICOMOS
   return value === 'validator' || value === 'valideur' ? 'validator' : 'agent';
 }
 

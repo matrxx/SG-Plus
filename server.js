@@ -17,7 +17,9 @@ const requestsRoutes = require('./routes/requests');
 const adminRoutes = require('./routes/admin');
 const uploadsRoutes = require('./routes/uploads');
 const documentsRoutes = require('./routes/documents');
+const cardsRoutes = require('./routes/cards');
 const { startPurgeSchedule } = require('./utils/uploads');
+const { startReminderSchedule } = require('./lib/cardReminders');
 
 if (!process.env.SESSION_SECRET || process.env.SESSION_SECRET.length < 16) {
   console.error(
@@ -131,6 +133,7 @@ app.use('/api', uploadsRoutes);
 app.use('/api', documentsRoutes);
 app.use('/api/requests', requestsRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/cards', cardsRoutes);
 
 // Endpoint de vérification de bon fonctionnement (utile pour le monitoring)
 // "build" = date de dernière modification du front servi : permet de vérifier
@@ -211,6 +214,7 @@ async function ensureDatabase() {
 async function startServer() {
   await ensureDatabase();
   startPurgeSchedule();
+  startReminderSchedule();
 
   if (process.env.ALLOW_TEST_BYPASS === 'true') {
     console.warn(

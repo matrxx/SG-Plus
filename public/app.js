@@ -237,7 +237,7 @@ async function checkAuth() {
 }
 
 // Libellés des rôles affichés dans l'en-tête
-const roleLabels = { agent: 'Agent', validator: 'Valideur', valideur: 'Valideur', admin: 'Administrateur', superAdmin: 'SuperAdmin' };
+const roleLabels = { agent: 'Agent', validator: 'Valideur', valideur: 'Valideur', admin: 'Administrateur', superAdmin: 'SuperAdmin', rh: 'RH', sg: 'SG' };
 
 // En-tête : identité de l'utilisateur connecté (nom si connu, sinon e-mail)
 function renderHeaderUser() {
@@ -342,8 +342,8 @@ async function renderAdminUsers() {
 
     list.innerHTML = data.users.map(user => {
       const roleKey = (user.role || 'agent').toLowerCase();
-      const roleClass = roleKey === 'validator' || roleKey === 'valideur' ? 'role-validator' : roleKey === 'admin' ? 'role-admin' : roleKey === 'superadmin' ? 'role-superadmin' : 'role-agent';
-      const roleText = roleKey === 'validator' || roleKey === 'valideur' ? 'Valideur' : roleKey === 'admin' ? 'Admin' : roleKey === 'superadmin' ? 'SuperAdmin' : 'Agent';
+      const roleClass = roleKey === 'validator' || roleKey === 'valideur' ? 'role-validator' : roleKey === 'admin' ? 'role-admin' : roleKey === 'superadmin' ? 'role-superadmin' : roleKey === 'rh' ? 'role-rh' : roleKey === 'sg' ? 'role-sg' : 'role-agent';
+      const roleText = roleKey === 'validator' || roleKey === 'valideur' ? 'Valideur' : roleKey === 'admin' ? 'Admin' : roleKey === 'superadmin' ? 'SuperAdmin' : roleKey === 'rh' ? 'RH' : roleKey === 'sg' ? 'SG' : 'Agent';
       const statusKey = (user.status || 'active').toLowerCase();
       const statusClass = statusKey === 'expired' ? 'status-expired' : statusKey === 'pending' ? 'status-pending' : statusKey === 'disabled' ? 'status-disabled' : 'status-active';
       const statusText = statusKey === 'expired' ? 'Expiré' : statusKey === 'pending' ? 'En attente' : statusKey === 'disabled' ? 'Désactivé' : 'Actif';
@@ -382,6 +382,8 @@ async function renderAdminUsers() {
               <option value="agent" ${roleKey === 'agent' ? 'selected' : ''}>Agent</option>
               <option value="validator" ${roleKey === 'validator' || roleKey === 'valideur' ? 'selected' : ''}>Valideur</option>
               <option value="admin" ${roleKey === 'admin' ? 'selected' : ''}>Administrateur</option>
+              <option value="rh" ${roleKey === 'rh' ? 'selected' : ''}>RH (gestion des cartes)</option>
+              <option value="sg" ${roleKey === 'sg' ? 'selected' : ''}>SG (gestion des cartes)</option>
               <option value="superAdmin" ${roleKey === 'superadmin' ? 'selected' : ''}>SuperAdmin</option>
             </select>
             <select id="admin-edit-status-${user.id}" aria-label="Statut">
@@ -850,6 +852,7 @@ async function logout() {
   formData = {};
   uploadedFiles = {};
   submittedRequests = [];
+  if (typeof resetCartesTab === 'function') resetCartesTab();
   const pass = document.getElementById('login-pass');
   if (pass) pass.value = '';
   showLoginView('login');
@@ -1852,8 +1855,8 @@ function showScreen(name, btn) {
 // Afficher un onglet de l'accueil (compatibilité)
 // Active un onglet (accueil | suivi | admin) : bouton + vue, sans appel réseau
 function selectTab(tab) {
-  const views = { accueil: 'accueil-tab-view', suivi: 'suivi-tab-view', admin: 'admin-panel' };
-  const buttons = { accueil: 'tab-accueil', suivi: 'tab-suivi', admin: 'admin-panel-toggle' };
+  const views = { accueil: 'accueil-tab-view', suivi: 'suivi-tab-view', cartes: 'cartes-panel', admin: 'admin-panel' };
+  const buttons = { accueil: 'tab-accueil', suivi: 'tab-suivi', cartes: 'tab-cartes', admin: 'admin-panel-toggle' };
   Object.keys(views).forEach((key) => {
     const view = document.getElementById(views[key]);
     const button = document.getElementById(buttons[key]);
@@ -1873,6 +1876,7 @@ function showAccueilTab(tab) {
   if (document.getElementById('screen-categorie').style.display === 'block') backToAccueil();
   selectTab(tab);
   if (tab === 'suivi') renderSuiviLists();
+  if (tab === 'cartes' && typeof openCartesTab === 'function') openCartesTab();
   if (tab === 'admin') refreshAdminData();
   window.scrollTo(0, 0);
 }

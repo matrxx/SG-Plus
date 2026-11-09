@@ -210,7 +210,7 @@ router.post(
 // se règle avec TEST_BYPASS_ROLE (agent | validator | admin | superAdmin,
 // « agent » par défaut).
 // ---------------------------------------------------------------
-const BYPASS_ROLES = ['agent', 'validator', 'admin', 'superAdmin'];
+const BYPASS_ROLES = ['agent', 'validator', 'admin', 'superAdmin', 'rh', 'sg'];
 const BYPASS_EMAIL = 'test.bypass@culture.gouv.fr';
 
 function isBypassEnabled() {
