@@ -106,6 +106,7 @@ const categoryMeta = [
   { key: 'equipements-bureau', icon: 'desk', bg: '#5DCAA5', fg: '#04342C' },
   { key: 'vehicule', icon: 'car', bg: '#AFA9EC', fg: '#26215C' },
   { key: 'evenementiel', icon: 'confetti', bg: '#ED93B1', fg: '#4B1528' },
+  { key: 'test', icon: 'send', bg: '#D3D1C7', fg: '#2C2C2A', staffOnly: true },
  //  { key: 'oeuvres-art', icon: 'palette', bg: '#97C459', fg: '#173404' }
 ];
 // Les catégories et formulaires sont définis dans forms-data.js (global categoryForms).
@@ -257,6 +258,8 @@ function showAuthenticatedUI() {
   renderHeaderUser();
   moveNavIndicator(false);
   setAdminPanelVisibility();
+  const search = document.getElementById('search-input');
+  renderCategories(search ? search.value : ''); // la catégorie « Test » dépend du rôle
 }
 
 // Afficher l'UI non connectée
@@ -1174,6 +1177,7 @@ function renderCategories(filterText) {
   let html = '';
   
   categoryMeta.forEach((meta) => {
+    if (meta.staffOnly && !isStaffUser()) return; // catégorie de test : administrateurs seulement
     const cat = categoryForms[meta.key];
     const allFormKeys = Object.keys(cat.forms);
     let matchingKeys = allFormKeys;

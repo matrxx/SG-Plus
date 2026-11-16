@@ -14,6 +14,7 @@
 //   MAIL_QUAI         livraison / enlèvement au quai
 //   MAIL_ACCES        accès externes, clés
 //   MAIL_DEFAUT       toute demande sans destinataire dédié
+//   MAIL_TEST         formulaire « Test d'envoi de mail » (défaut : kilyan.benhamma@culture.gouv.fr)
 //
 // Objet de chaque e-mail : "<Catégorie> - <Formulaire>"
 //   ex. "Intervention technique - Ascenseur / Monte charges"
@@ -35,12 +36,14 @@ function addresses() {
     quai: list(process.env.MAIL_QUAI),
     acces: list(process.env.MAIL_ACCES),
     defaut: list(process.env.MAIL_DEFAUT),
+    test: list(process.env.MAIL_TEST || 'kilyan.benhamma@culture.gouv.fr'),
   };
 }
 
 // Destinataires par formulaire ("catégorie/formulaire"). Une fonction reçoit
 // les adresses et les données validées (pour router selon un choix).
 const ROUTES = {
+  'test/test_mail': (a) => a.test,
   'intervention-technique/ascenseur': (a) => a.technique,
   'intervention-technique/intervention': (a) => a.technique,
   'livraison-envoi/livraison': (a) => a.technique,

@@ -223,6 +223,18 @@ return {
     }
   },
 
+  // Catégorie de test (visible des administrateurs seulement, voir app.js) : le mail part
+  // uniquement vers MAIL_TEST (par défaut kilyan.benhamma@culture.gouv.fr), voir config/mail-routing.js.
+  'test': {
+    title: 'Test',
+    forms: {
+      test_mail: { title: "Test d'envoi de mail", ref: "TST", icon: 'send', steps: [
+        { label: "Votre message", title: "Test d'envoi de mail", desc: "Ce formulaire sert à vérifier la messagerie : le mail est envoyé uniquement à l'adresse de test.", type: 'fields', fields: [{label:"Objet du test", req:true},{label:"Message", type:'textarea'}] },
+        { label: "Validation", title: "Validation", desc: "Vérifiez le récapitulatif avant envoi", type: 'summary' }
+      ]}
+    }
+  },
+
   'oeuvres-art': {
     title: "Œuvres et objets d'art",
     forms: {
