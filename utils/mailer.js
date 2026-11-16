@@ -13,7 +13,9 @@ const transporter = nodemailer.createTransport({
   host: process.env.SMTP_HOST,
   port: parseInt(process.env.SMTP_PORT || '587', 10),
   secure: process.env.SMTP_SECURE === 'true',
-  auth: process.env.SMTP_USER
+  // Authentification seulement si identifiant ET mot de passe sont fournis : un relais interne
+  // (comme smtp-dmz.culture.fr) accepte les envois sans login, comme le fait Django.
+  auth: process.env.SMTP_USER && process.env.SMTP_PASSWORD
     ? { user: process.env.SMTP_USER, pass: process.env.SMTP_PASSWORD }
     : undefined,
   // Microsoft 365 (smtp.office365.com:587) impose STARTTLS : SMTP_REQUIRE_TLS=true
@@ -39,7 +41,8 @@ function getFromHeader() {
 }
 
 function checkSMTPConfig() {
-  const requiredVars = ['SMTP_HOST', 'SMTP_PORT', 'SMTP_USER', 'SMTP_PASSWORD'];
+  // Hôte et port suffisent : l'identifiant et le mot de passe sont facultatifs (relais interne).
+  const requiredVars = ['SMTP_HOST', 'SMTP_PORT'];
   return requiredVars.every((varName) => process.env[varName]);
 }
 

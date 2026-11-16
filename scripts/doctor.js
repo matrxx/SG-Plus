@@ -90,8 +90,8 @@ async function main() {
 
   // --- SMTP -------------------------------------------------------------
   if (!checkSMTPConfig()) {
-    report('fail', 'SMTP', 'SMTP_HOST / SMTP_PORT / SMTP_USER / SMTP_PASSWORD non renseignés : aucun e-mail ne partira');
-  } else if (isPlaceholder(process.env.SMTP_HOST) || isPlaceholder(process.env.SMTP_USER)) {
+    report('fail', 'SMTP', 'SMTP_HOST / SMTP_PORT non renseignés : aucun e-mail ne partira');
+  } else if (isPlaceholder(process.env.SMTP_HOST) || (process.env.SMTP_USER && isPlaceholder(process.env.SMTP_USER))) {
     report('fail', 'SMTP', `valeurs d’exemple détectées (SMTP_HOST=${process.env.SMTP_HOST}) : renseignez le vrai serveur dans .env`);
   } else if (await verifySmtpConnection()) {
     report('ok', 'SMTP', `${process.env.SMTP_HOST}:${process.env.SMTP_PORT}`);
